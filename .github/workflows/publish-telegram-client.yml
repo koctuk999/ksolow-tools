@@ -1,0 +1,42 @@
+name: Publish Telegram Client
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "telegram-client/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - ".github/workflows/publish-telegram-client.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-telegram-client-main
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Publish telegram-client
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG_GRADLE_PROJECT_version: 0.0.1-main.${{ github.run_number }}
+        run: ./gradlew :telegram-client:publish
