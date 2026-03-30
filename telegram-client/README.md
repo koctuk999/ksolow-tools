@@ -1,0 +1,230 @@
+# `telegram-client`
+
+Библиотека для Telegram-ботов на базе `kotlin-telegram-bot`, которая использует API проекта `ksolow-tools`.
+
+Что есть в модуле:
+
+- экстеншены `sendMessageWithChunking` и `sendPhotoWithTruncatedCaption`
+- DSL для команд через интерфейс `Command`
+- command handlers:
+  `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleCat`
+- text handlers:
+  `cacheMessageForDay`, `handleDirectAddress`
+- проверка доступа через `forAllowedChats`
+- хранение выбранного стиля чата в MongoDB
+- хранение сообщений за день в MongoDB с `dayKey`
+- шифрование сообщений в MongoDB через AES/GCM
+
+## Зависимости
+
+Модуль рассчитан на использование вместе с backend-модулем этого репозитория.
+
+Нужные backend endpoints:
+
+- `GET /tools/styles`
+- `GET /tools/cat`
+- `GET /weather/current`
+- `GET /weather/current/styled`
+- `GET /day/holidays/today`
+- `GET /day/holidays/today/styled`
+- `POST /day/summary/styled`
+- `POST /ai/proxy/request/styled`
+
+## Конфигурация
+
+Перед использованием модуль нужно один раз инициализировать:
+
+```kotlin
+KsolowToolsTelegram.configure(
+    KsolowToolsTelegramClientConfig(
+        serviceUrl = "http://localhost:8080",
+        mongoUrl = "mongodb://localhost:27017",
+        mongoDatabase = "kidala-bot",
+        messagesEncryptionKey = "base64-or-raw-key",
+        dayZoneId = "Europe/Moscow",
+        allowedIds = setOf(123L, 456L),
+        defaultStyle = "stebun"
+    )
+)
+```
+
+### Поля `KsolowToolsTelegramClientConfig`
+
+- `serviceUrl`: base URL backend-сервиса
+- `mongoUrl`: адрес MongoDB
+- `mongoDatabase`: имя базы данных
+- `messagesEncryptionKey`: ключ шифрования сообщений за день
+- `dayZoneId`: таймзона для `dayKey`
+- `allowedIds`: список разрешенных chat id; если пустой, фильтра нет
+- `defaultStyle`: стиль по умолчанию, если для чата стиль еще не сохранен
+- `notAllowedMessage`: текст ответа для запрещенных чатов
+- `weatherUnknownCityMessage`: текст, если город не распознан
+- `dayNoMessagesMessage`: текст для `/day`, если за текущий день нет сообщений
+- `styleListTemplate`: шаблон ответа `/style`
+- `styleUnknownTemplate`: шаблон ответа для неизвестного стиля
+- `styleSetSuccessTemplate`: шаблон ответа при успешной смене стиля
+- `weatherLocationAliases`: алиасы городов для `/weather`
+
+## Команды
+
+Можно использовать свой enum с интерфейсом `Command`:
+
+```kotlin
+enum class BotCommand(override val value: String) : Command {
+    WEATHER("weather"),
+    HOLIDAYS("holidays"),
+    DAY("day"),
+    STYLE("style"),
+    CAT("cat")
+}
+```
+
+После этого доступен extension для `Dispatcher`:
+
+```kotlin
+command(BotCommand.WEATHER) {
+    handleWeather()
+}
+```
+
+## Пример интеграции
+
+```kotlin
+import com.github.kotlintelegrambot.bot
+import com.github.kotlintelegrambot.dispatch
+import com.github.kotlintelegrambot.dispatcher.message
+import ru.ksolowtools.telegram.client.Command
+import ru.ksolowtools.telegram.client.KsolowToolsTelegram
+import ru.ksolowtools.telegram.client.KsolowToolsTelegramClientConfig
+import ru.ksolowtools.telegram.client.cacheMessageForDay
+import ru.ksolowtools.telegram.client.command
+import ru.ksolowtools.telegram.client.forAllowedChats
+import ru.ksolowtools.telegram.client.handleCat
+import ru.ksolowtools.telegram.client.handleDay
+import ru.ksolowtools.telegram.client.handleDirectAddress
+import ru.ksolowtools.telegram.client.handleHolidays
+import ru.ksolowtools.telegram.client.handleStyle
+import ru.ksolowtools.telegram.client.handleWeather
+
+enum class BotCommand(override val value: String) : Command {
+    WEATHER("weather"),
+    HOLIDAYS("holidays"),
+    DAY("day"),
+    STYLE("style"),
+    CAT("cat")
+}
+
+fun createBot(token: String, username: String) = bot {
+    this.token = token
+
+    dispatch {
+        command(BotCommand.WEATHER) {
+            forAllowedChats {
+                handleWeather()
+            }
+        }
+
+        command(BotCommand.HOLIDAYS) {
+            forAllowedChats {
+                handleHolidays()
+            }
+        }
+
+        command(BotCommand.DAY) {
+            forAllowedChats {
+                handleDay()
+            }
+        }
+
+        command(BotCommand.STYLE) {
+            forAllowedChats {
+                handleStyle()
+            }
+        }
+
+        command(BotCommand.CAT) {
+            forAllowedChats {
+                handleCat()
+            }
+        }
+
+        message {
+            forAllowedChats {
+                cacheMessageForDay()
+                handleDirectAddress(botUsername = username)
+            }
+        }
+    }
+}
+```
+
+## Что хранится в MongoDB
+
+Коллекция `chats`:
+
+- `chatId`
+- `name`
+- `style`
+
+Коллекция `dayMessages`:
+
+- `chatId`
+- `dayKey`
+- `message`
+
+`message` хранится в зашифрованном виде.
+
+## Замечания
+
+- `/day` использует только сообщения за текущий `dayKey`
+- `dayKey` вычисляется в таймзоне `dayZoneId`
+- если backend недоступен, часть handlers использует fallback-ответы
+- список доступных стилей берется из backend и кэшируется в клиенте
+
+## Публикация в GitHub Packages
+
+В модуле уже настроен `maven-publish`.
+
+Для публикации нужны:
+
+- GitHub repository owner
+- GitHub repository name
+- GitHub token с правом публикации пакетов
+
+Пример локальной публикации:
+
+```bash
+export GITHUB_ACTOR=<github-user>
+export GITHUB_TOKEN=<github-token>
+
+./gradlew :telegram-client:publish \
+  -PgithubOwner=<owner> \
+  -PgithubRepository=<repo>
+```
+
+Можно также передавать owner/repo через `GITHUB_REPOSITORY=<owner>/<repo>`.
+
+Артефакт публикуется с координатами:
+
+```text
+ru.ksolowtools:telegram-client:<version>
+```
+
+### Подключение в другом проекте
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/<owner>/<repo>")
+        credentials {
+            username = System.getenv("GITHUB_ACTOR")
+            password = System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
+    implementation("ru.ksolowtools:telegram-client:0.0.1-SNAPSHOT")
+}
+```

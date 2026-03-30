@@ -1,0 +1,193 @@
+package ru.ksolowtools.telegram.client
+
+import com.github.kotlintelegrambot.dispatcher.handlers.CommandHandlerEnvironment
+import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.ParseMode
+import com.github.kotlintelegrambot.entities.TelegramFile.ByUrl
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import ru.ksolowtools.telegram.client.api.KsolowToolsApiClient
+import ru.ksolowtools.telegram.client.repository.DayMessageRepository
+import ru.ksolowtools.telegram.client.style.KsolowToolsStyleService
+
+private val log = LoggerFactory.getLogger("KsolowToolsTelegramCommands")
+
+fun CommandHandlerEnvironment.forAllowedChats(
+    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
+    action: CommandHandlerEnvironment.() -> Unit
+) {
+    if (config.allowedIds.isEmpty() || message.chat.id in config.allowedIds) {
+        action()
+        return
+    }
+
+    bot.sendMessage(
+        chatId = ChatId.fromId(message.chat.id),
+        text = config.notAllowedMessage
+    ).also {
+        it.logTelegramResult("Запрещенный чат", log)
+    }
+}
+
+fun CommandHandlerEnvironment.handleHolidays(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
+    style: String? = styleService.resolveStyleName(message.chat.id),
+    parseMode: ParseMode? = null,
+    action: String = "Команда /holidays",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val response = apiClient.holidaysToday(style)
+    bot.sendMessageWithChunking(
+        chatId = ChatId.fromId(message.chat.id),
+        text = response,
+        action = action,
+        log = log,
+        parseMode = parseMode
+    )
+}
+
+fun CommandHandlerEnvironment.handleWeather(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
+    styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
+    style: String? = styleService.resolveStyleName(message.chat.id),
+    parseMode: ParseMode? = null,
+    action: String = "Команда /weather",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val location = resolveWeatherLocationCode(rawCommandText(), config.weatherLocationAliases)
+    val response = if (location == null) {
+        config.weatherUnknownCityMessage
+    } else {
+        apiClient.currentWeather(location = location, style = style)
+    }
+
+    bot.sendMessageWithChunking(
+        chatId = ChatId.fromId(message.chat.id),
+        text = response,
+        action = action,
+        log = log,
+        parseMode = parseMode
+    )
+}
+
+fun CommandHandlerEnvironment.handleDay(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    dayMessageRepository: DayMessageRepository = KsolowToolsTelegram.dayMessageRepository,
+    styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
+    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
+    parseMode: ParseMode? = null,
+    action: String = "Команда /day",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val messages = dayMessageRepository.getByChatId(message.chat.id)
+    val response = if (messages.isEmpty()) {
+        config.dayNoMessagesMessage
+    } else {
+        val style = styleService.resolveStyleName(message.chat.id)
+        if (style.isNullOrBlank()) {
+            config.dayNoMessagesMessage
+        } else {
+            apiClient.daySummary(
+                style = style,
+                messages = messages
+            )
+        }
+    }
+
+    bot.sendMessageWithChunking(
+        chatId = ChatId.fromId(message.chat.id),
+        text = response,
+        action = action,
+        log = log,
+        parseMode = parseMode
+    )
+}
+
+fun CommandHandlerEnvironment.handleStyle(
+    styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
+    action: String = "Команда /style",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val chatId = message.chat.id
+    val styleArg = rawCommandText()
+        ?.substringAfter(' ', "")
+        ?.trim()
+        .orEmpty()
+
+    val availableStyles = styleService.availableStyles()
+    val availableStylesText = availableStyles.joinToString(", ")
+    val currentStyle = styleService.resolveStyleName(chatId).orEmpty()
+
+    val response = if (styleArg.isBlank()) {
+        styleService.format(
+            template = KsolowToolsTelegram.config.styleListTemplate,
+            variables = mapOf(
+                "style" to currentStyle,
+                "styles" to availableStylesText
+            )
+        )
+    } else {
+        val resolvedStyle = styleService.resolveRequestedStyle(styleArg)
+        if (resolvedStyle == null) {
+            styleService.format(
+                template = KsolowToolsTelegram.config.styleUnknownTemplate,
+                variables = mapOf(
+                    "style" to styleArg,
+                    "styles" to availableStylesText
+                )
+            )
+        } else {
+            styleService.saveStyleForChat(chatId, chatDisplayName(), resolvedStyle)
+            styleService.format(
+                template = KsolowToolsTelegram.config.styleSetSuccessTemplate,
+                variables = mapOf("style" to resolvedStyle)
+            )
+        }
+    }
+
+    bot.sendMessageWithChunking(
+        chatId = ChatId.fromId(chatId),
+        text = response,
+        action = action,
+        log = log
+    )
+}
+
+fun CommandHandlerEnvironment.handleCat(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    action: String = "Команда /cat",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    bot.sendPhoto(
+        chatId = ChatId.fromId(message.chat.id),
+        photo = ByUrl(apiClient.randomCat())
+    ).also {
+        it.logTelegramCall(action, log)
+    }
+}
+
+internal fun resolveWeatherLocationCode(
+    commandText: String?,
+    aliases: Map<String, String>
+): String? {
+    val cityArg = commandText
+        ?.substringAfter(' ', "")
+        ?.trim()
+        ?.lowercase()
+        .orEmpty()
+
+    return when {
+        cityArg.isBlank() -> aliases["spb"] ?: aliases.values.firstOrNull()
+        else -> aliases[cityArg]
+    }
+}
+
+private fun CommandHandlerEnvironment.rawCommandText(): String? = message.text ?: message.caption
+
+private fun CommandHandlerEnvironment.chatDisplayName(): String? =
+    message.chat.title
+        ?: message.chat.username
+        ?: message.chat.firstName
+        ?: message.chat.lastName
