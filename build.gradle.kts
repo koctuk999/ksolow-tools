@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "ru"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2-SNAPSHOT"
 description = "ksolow-tools"
 
 subprojects {

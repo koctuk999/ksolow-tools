@@ -59,7 +59,12 @@ class KsolowToolsApiClient(
         response.holidays.forEach { appendLine("— $it") }
     }.trim()
 
-    fun aiDirectResponse(style: String, text: String, quotedText: String? = null): String = runCatching {
+    fun aiDirectResponse(
+        style: String,
+        text: String,
+        quotedText: String? = null,
+        fallback: String = config.aiFallbackMessage
+    ): String = runCatching {
         api.aiStyledRequest(
             StyledAiProxyRequest(
                 style = style,
@@ -69,7 +74,7 @@ class KsolowToolsApiClient(
         ).execute().body().requireBody("aiStyledRequest").text
     }
         .onFailure { log.warn("Не удалось получить AI-ответ из сервиса {}", config.serviceUrl, it) }
-        .getOrElse { text }
+        .getOrElse { fallback }
 
     private fun fallbackDaySummary(messages: List<String>): String = buildString {
         appendLine("Итоги дня:")

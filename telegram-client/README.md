@@ -43,7 +43,8 @@ KsolowToolsTelegram.configure(
         messagesEncryptionKey = "base64-or-raw-key",
         dayZoneId = "Europe/Moscow",
         allowedIds = setOf(123L, 456L),
-        defaultStyle = "stebun"
+        defaultStyle = "stebun",
+        aiFallbackMessage = "Не смог ответить, попробуй еще раз."
     )
 )
 ```
@@ -58,6 +59,7 @@ KsolowToolsTelegram.configure(
 - `allowedIds`: список разрешенных chat id; если пустой, фильтра нет
 - `defaultStyle`: стиль по умолчанию, если для чата стиль еще не сохранен
 - `notAllowedMessage`: текст ответа для запрещенных чатов
+- `aiFallbackMessage`: fallback для ответов AI при ошибке backend
 - `weatherUnknownCityMessage`: текст, если город не распознан
 - `dayNoMessagesMessage`: текст для `/day`, если за текущий день нет сообщений
 - `styleListTemplate`: шаблон ответа `/style`
@@ -231,6 +233,6 @@ repositories {
 }
 
 dependencies {
-    implementation("ru.ksolowtools:telegram-client:0.0.1-SNAPSHOT")
+    implementation("ru.ksolowtools:telegram-client:0.0.2-SNAPSHOT")
 }
 ```

@@ -12,6 +12,23 @@ import ru.ksolowtools.telegram.client.style.KsolowToolsStyleService
 
 private val log = LoggerFactory.getLogger("KsolowToolsTelegramTextHandlers")
 
+fun MessageHandlerEnvironment.forAllowedChats(
+    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
+    action: MessageHandlerEnvironment.() -> Unit
+) {
+    if (config.allowedIds.isEmpty() || message.chat.id in config.allowedIds) {
+        action()
+        return
+    }
+
+    bot.sendMessage(
+        chatId = ChatId.fromId(message.chat.id),
+        text = config.notAllowedMessage
+    ).also {
+        it.logTelegramResult("Запрещенный чат", log)
+    }
+}
+
 fun MessageHandlerEnvironment.cacheMessageForDay(
     dayMessageRepository: DayMessageRepository = KsolowToolsTelegram.dayMessageRepository
 ) {
@@ -35,6 +52,7 @@ fun MessageHandlerEnvironment.handleDirectAddress(
     botUsername: String,
     apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
     styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
+    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
     parseMode: ParseMode? = null,
     action: String = "Ответ на обращение",
     log: Logger = ru.ksolowtools.telegram.client.log
@@ -69,7 +87,8 @@ fun MessageHandlerEnvironment.handleDirectAddress(
     val response = apiClient.aiDirectResponse(
         style = style,
         text = userText,
-        quotedText = repliedMessage?.textOrCaption()
+        quotedText = repliedMessage?.textOrCaption(),
+        fallback = config.aiFallbackMessage
     )
 
     bot.sendMessageWithChunking(
