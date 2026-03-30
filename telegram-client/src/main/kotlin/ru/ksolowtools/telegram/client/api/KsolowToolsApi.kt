@@ -37,6 +37,16 @@ internal interface KsolowToolsApi {
         @Body request: StyledDaySummaryRequest
     ): Call<StyledDaySummaryResponse>
 
+    @POST("day/morning-message/styled")
+    fun morningMessageStyled(
+        @Body request: StyledMorningMessageRequest
+    ): Call<StyledMorningMessageResponse>
+
+    @POST("day/evening-message/styled")
+    fun eveningMessageStyled(
+        @Body request: StyledEveningMessageRequest
+    ): Call<StyledEveningMessageResponse>
+
     @POST("ai/proxy/request/styled")
     fun aiStyledRequest(
         @Body request: StyledAiProxyRequest
@@ -75,6 +85,25 @@ data class StyledDaySummaryResponse(
     val style: String,
     val messagesCount: Int,
     val text: String
+)
+
+data class StyledMorningMessageRequest(
+    val style: String,
+    val zoneId: String? = null
+)
+
+data class StyledMorningMessageResponse(
+    val text: String
+)
+
+data class StyledEveningMessageRequest(
+    val style: String,
+    val messages: List<String>
+)
+
+data class StyledEveningMessageResponse(
+    val text: String,
+    val imageUrl: String
 )
 
 data class StyledAiProxyRequest(

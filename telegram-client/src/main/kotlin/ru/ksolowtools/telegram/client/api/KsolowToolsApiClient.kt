@@ -54,6 +54,33 @@ class KsolowToolsApiClient(
         .onFailure { log.warn("Не удалось получить саммари дня из сервиса {}", config.serviceUrl, it) }
         .getOrElse { fallbackDaySummary(messages) }
 
+    fun morningMessage(style: String): String = runCatching {
+        api.morningMessageStyled(
+            StyledMorningMessageRequest(
+                style = style,
+                zoneId = config.dayZoneId
+            )
+        ).execute().body().requireBody("morningMessageStyled").text
+    }
+        .onFailure { log.warn("Не удалось получить утреннее сообщение из сервиса {}", config.serviceUrl, it) }
+        .getOrElse { "Не удалось получить утреннее сообщение." }
+
+    fun eveningMessage(style: String, messages: List<String>): StyledEveningMessage = runCatching {
+        api.eveningMessageStyled(
+            StyledEveningMessageRequest(
+                style = style,
+                messages = messages
+            )
+        ).execute().body().requireBody("eveningMessageStyled").toModel()
+    }
+        .onFailure { log.warn("Не удалось получить вечернее сообщение из сервиса {}", config.serviceUrl, it) }
+        .getOrElse {
+            StyledEveningMessage(
+                text = fallbackDaySummary(messages),
+                imageUrl = DEFAULT_CAT_URL
+            )
+        }
+
     private fun formatHolidays(response: HolidaysResponse): String = buildString {
         appendLine("Праздники на ${response.date}:")
         response.holidays.forEach { appendLine("— $it") }
@@ -78,10 +105,28 @@ class KsolowToolsApiClient(
 
     private fun fallbackDaySummary(messages: List<String>): String = buildString {
         appendLine("Итоги дня:")
-        messages.take(10).forEach { appendLine("— $it") }
+        if (messages.isEmpty()) {
+            appendLine("— Сегодня в чате было тихо, но это тоже результат.")
+        } else {
+            messages.take(10).forEach { appendLine("— $it") }
+        }
     }.trim()
+
+    private fun StyledEveningMessageResponse.toModel(): StyledEveningMessage = StyledEveningMessage(
+        text = text,
+        imageUrl = imageUrl
+    )
+
+    companion object {
+        const val DEFAULT_CAT_URL: String = "https://cdn2.thecatapi.com/images/MTY3ODIyMQ.jpg"
+    }
 }
 
 private fun <T> T?.requireBody(action: String): T = requireNotNull(this) {
     "Empty response body for $action"
 }
+
+data class StyledEveningMessage(
+    val text: String,
+    val imageUrl: String
+)

@@ -8,6 +8,7 @@
 - DSL для команд через интерфейс `Command`
 - command handlers:
   `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleCat`
+- scheduler helper: `KsolowToolsTelegram.scheduleMessageSupport`
 - text handlers:
   `cacheMessageForDay`, `handleDirectAddress`
 - проверка доступа через `forAllowedChats`
@@ -28,6 +29,8 @@
 - `GET /day/holidays/today`
 - `GET /day/holidays/today/styled`
 - `POST /day/summary/styled`
+- `POST /day/morning-message/styled`
+- `POST /day/evening-message/styled`
 - `POST /ai/proxy/request/styled`
 
 ## Конфигурация
@@ -182,6 +185,20 @@ fun createBot(token: String, username: String) = bot {
 - `dayKey` вычисляется в таймзоне `dayZoneId`
 - если backend недоступен, часть handlers использует fallback-ответы
 - список доступных стилей берется из backend и кэшируется в клиенте
+
+## Scheduler helper
+
+Для morning/evening flow можно использовать:
+
+```kotlin
+val morningText = KsolowToolsTelegram.scheduleMessageSupport.morningMessage(chatId)
+
+val evening = KsolowToolsTelegram.scheduleMessageSupport.eveningMessage(chatId)
+val text = evening.text
+val imageUrl = evening.imageUrl
+```
+
+`eveningMessage(chatId)` сам резолвит стиль чата, достает сообщения за текущий `dayKey` и вызывает backend.
 
 ## Публикация в GitHub Packages
 
