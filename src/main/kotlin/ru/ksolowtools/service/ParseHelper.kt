@@ -6,15 +6,6 @@ import ru.ksolowtools.client.CommonClient.sendRequest
 import ru.ksolowtools.service.TargetDay.TODAY
 import ru.ksolowtools.service.TargetDay.TOMORROW
 
-data class Holiday(
-    val name: String
-)
-
-enum class TargetDay {
-    TODAY,
-    TOMORROW
-}
-
 fun getHolidays(day: TargetDay) = parseHolidaysTodayHtml(
     html = requireNotNull(
         sendRequest {
@@ -31,7 +22,7 @@ fun getHolidays(day: TargetDay) = parseHolidaysTodayHtml(
 
 private fun parseHolidaysTodayHtml(
     html: String
-): List<Holiday> {
+): List<String> {
 
     val doc = Jsoup.parse(html)
 
@@ -49,7 +40,6 @@ private fun parseHolidaysTodayHtml(
         .asSequence()
         .mapNotNull { li -> li.extractHolidayName() }
         .distinct()
-        .map(::Holiday)
         .toList()
 }
 
