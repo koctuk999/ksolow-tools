@@ -9,31 +9,18 @@ import org.springframework.stereotype.Service
 class StyleService {
     private val yamlMapper = ObjectMapper(YAMLFactory())
 
-    private val loadedStyles: Map<String, StylePrompts> by lazy {
+    private val loadedStyles: Map<String, StyleDefinition> by lazy {
         val resource = ClassPathResource("styles/styles.yml")
         resource.inputStream.use { inputStream ->
-            val file = yamlMapper.readValue(inputStream, StyleFile::class.java)
-            file.styles.mapValues { (_, style) ->
-                StylePrompts(
-                    style = style.style.trim(),
-                    chat = mergePrompts(style.style, style.chat, file.prompts.chat),
-                    weather = mergePrompts(style.style, style.weather, file.prompts.weather),
-                    daySummary = mergePrompts(style.style, style.daySummary, file.prompts.daySummary),
-                    holidays = mergePrompts(style.style, style.holidays, file.prompts.holidays),
-                    morning = mergePrompts(style.style, style.morning, file.prompts.morning)
-                )
-            }
+            yamlMapper.readValue(inputStream, StyleFile::class.java)
+                .styles
+                .mapValues { (_, style) -> style.copy(systemPrompt = style.systemPrompt.trim()) }
         }
     }
 
     fun getStyleNames(): List<String> = loadedStyles.keys.sorted()
 
-    fun getStylePrompts(styleName: String): StylePrompts = requireNotNull(loadedStyles[styleName]) {
+    fun getStyle(styleName: String): StyleDefinition = requireNotNull(loadedStyles[styleName]) {
         "Стиль '$styleName' не найден"
     }
-
-    private fun mergePrompts(vararg parts: String): String = parts
-        .map(String::trim)
-        .filter(String::isNotEmpty)
-        .joinToString("\n\n")
 }

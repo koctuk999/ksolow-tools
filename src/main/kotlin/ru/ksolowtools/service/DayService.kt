@@ -8,7 +8,7 @@ import ru.ksolowtools.client.ai.AIRequestOptions
 import ru.ksolowtools.client.day.DayClient
 import ru.ksolowtools.service.TargetDay.TODAY
 import ru.ksolowtools.service.TargetDay.TOMORROW
-import ru.ksolowtools.service.style.StyleService
+import ru.ksolowtools.service.style.PromptService
 import java.time.ZoneId
 import java.time.ZoneId.of
 import java.time.ZonedDateTime.now
@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter.ofPattern
 class DayService(
     private val aiClient: AIClient,
     private val dayClient: DayClient,
-    private val styleService: StyleService
+    private val promptService: PromptService
 ) {
 
     private val log = LoggerFactory.getLogger(DayService::class.java)
@@ -75,7 +75,6 @@ class DayService(
     }
 
     private fun generateStyledHolidays(style: String): String {
-        val prompts = styleService.getStylePrompts(style)
         val holidays = holidaysCache[TODAY] ?: emptyList()
         val fallback = fallbackHolidaysText(holidays)
         val userPrompt = buildString {
@@ -85,7 +84,7 @@ class DayService(
         }.trim()
 
         return aiClient.complete(
-            systemPrompt = prompts.holidays,
+            systemPrompt = promptService.buildSystemPrompt(style, "holidays"),
             userPrompt = userPrompt,
             fallback = fallback,
             options = AIRequestOptions()
