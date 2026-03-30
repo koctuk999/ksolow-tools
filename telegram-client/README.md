@@ -198,11 +198,17 @@ export GITHUB_ACTOR=<github-user>
 export GITHUB_TOKEN=<github-token>
 
 ./gradlew :telegram-client:publish \
-  -PgithubOwner=<owner> \
-  -PgithubRepository=<repo>
+  -PgithubOwner=koctuk999 \
+  -PgithubRepository=ksolow-tools
 ```
 
 Можно также передавать owner/repo через `GITHUB_REPOSITORY=<owner>/<repo>`.
+
+Для текущего репозитория это:
+
+```bash
+export GITHUB_REPOSITORY=koctuk999/ksolow-tools
+```
 
 Артефакт публикуется с координатами:
 
@@ -216,7 +222,7 @@ ru.ksolowtools:telegram-client:<version>
 repositories {
     mavenCentral()
     maven {
-        url = uri("https://maven.pkg.github.com/<owner>/<repo>")
+        url = uri("https://maven.pkg.github.com/koctuk999/ksolow-tools")
         credentials {
             username = System.getenv("GITHUB_ACTOR")
             password = System.getenv("GITHUB_TOKEN")
