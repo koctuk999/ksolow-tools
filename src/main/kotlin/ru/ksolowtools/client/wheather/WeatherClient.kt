@@ -1,9 +1,9 @@
 package ru.ksolowtools.client.wheather
 
-import ru.ksolowtools.client.HttpClient
 import org.slf4j.LoggerFactory.getLogger
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import ru.ksolowtools.client.HttpClient
 import java.time.ZoneId
 
 @Service
@@ -16,7 +16,7 @@ class WeatherClient(
 
     private val api = retrofit.create(WeatherApi::class.java)
 
-    fun currentWeather(location: CityCoordinates) = kotlin.runCatching {
+    fun currentWeather(location: WeatherLocation) = kotlin.runCatching {
         api.current(
             key = apiKey,
             lang = "ru",
@@ -34,6 +34,23 @@ class WeatherClient(
         .getOrNull()
 }
 
-enum class CityCoordinates(val title: String, val lat: String, val lon: String, val zoneId: ZoneId) {
-    SPB("Санкт-Петербург", "59.9342802", "30.3350986", ZoneId.of("Europe/Moscow"))
+enum class WeatherLocation(
+    val code: String,
+    val title: String,
+    val lat: String,
+    val lon: String,
+    val zoneId: ZoneId
+) {
+    SPB(
+        code = "spb",
+        title = "Санкт-Петербург",
+        lat = "59.9342802",
+        lon = "30.3350986",
+        zoneId = ZoneId.of("Europe/Moscow")
+    );
+
+    companion object {
+        fun fromCode(code: String): WeatherLocation = entries.firstOrNull { it.code.equals(code, ignoreCase = true) }
+            ?: throw IllegalArgumentException("Локация '$code' не найдена")
+    }
 }

@@ -20,13 +20,13 @@ data class WeatherData(
     val clouds: Int,
     val windSpd: Double,
     val windCdirFull: String,
-    val pres: Int,
+    val pres: Double,
     val rh: Int,
-    val snow: Int,
-    val precip:Int,
+    val snow: Double,
+    val precip: Double,
     val weather: Weather,
-    val uv:Int,
-    val aqi:Int
+    val uv: Double,
+    val aqi: Int
 )
 
 data class Weather(
