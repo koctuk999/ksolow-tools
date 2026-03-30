@@ -250,6 +250,6 @@ repositories {
 }
 
 dependencies {
-    implementation("ru.ksolowtools:telegram-client:0.0.2-SNAPSHOT")
+    implementation("ru.ksolowtools:telegram-client:0.0.3-SNAPSHOT")
 }
 ```
