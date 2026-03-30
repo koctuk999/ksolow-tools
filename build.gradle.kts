@@ -26,11 +26,11 @@ jib {
         image = "eclipse-temurin:17-jre"
     }
     to {
-        image = System.getenv("DOCKER_HUB_REGISTRY")
+        image = System.getenv("DOCKERHUB_REGISTRY")
         tags = setOf("latest", version.toString())
         auth {
-            username = System.getenv("DOCKER_HUB_USERNAME")
-            password = System.getenv("DOCKER_HUB_PASSWORD")
+            username = System.getenv("DOCKERHUB_USERNAME")
+            password = System.getenv("DOCKERHUB_PASSWORD")
         }
     }
     container {
