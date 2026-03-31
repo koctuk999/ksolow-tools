@@ -1,0 +1,42 @@
+name: Publish Backend Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - ".github/workflows/publish-backend-image.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-backend-image-main
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Publish backend image with Jib
+        env:
+          DOCKERHUB_REGISTRY: ${{ secrets.DOCKERHUB_REGISTRY }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+          ORG_GRADLE_PROJECT_version: 1.0.0-main.${{ github.run_number }}
+        run: ./gradlew :backend:jib
