@@ -4,10 +4,15 @@ import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.entities.ParseMode
 import com.github.kotlintelegrambot.entities.TelegramFile
+import com.github.kotlintelegrambot.entities.TelegramFile.ByFile
 import com.github.kotlintelegrambot.network.Response
 import com.github.kotlintelegrambot.types.TelegramBotResult
 import org.slf4j.Logger
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import retrofit2.Response as RetrofitResponse
+import java.io.File
+import java.nio.file.Files
 
 fun <T> TelegramBotResult<T>.logTelegramResult(action: String, log: Logger) {
     fold(
@@ -105,6 +110,68 @@ fun Bot.sendPhotoWithTruncatedCaption(
 
 internal fun splitIntoChunks(text: String, maxLength: Int): List<String> =
     if (text.length <= maxLength) listOf(text) else text.chunked(maxLength)
+
+fun Bot.sendAudioFromUrl(
+    chatId: ChatId,
+    audioUrl: String,
+    performer: String,
+    title: String?,
+    duration: Int?,
+    action: String,
+    log: Logger,
+    replyToMessageId: Long? = null,
+    allowSendingWithoutReply: Boolean = true
+) {
+    val audioFile = downloadAudioFile(audioUrl, log)
+    if (audioFile == null) {
+        sendMessage(
+            chatId = chatId,
+            text = "Suno сгенерировал трек, но mp3 скачать не удалось."
+        ).also {
+            it.logTelegramResult("$action (ошибка скачивания)", log)
+        }
+        return
+    }
+
+    try {
+        sendAudio(
+            chatId = chatId,
+            audio = ByFile(audioFile),
+            duration = duration,
+            performer = performer,
+            title = title,
+            replyToMessageId = replyToMessageId,
+            allowSendingWithoutReply = allowSendingWithoutReply
+        ).also { call ->
+            call.logTelegramCall("$action (отправка mp3)", log)
+        }
+    } finally {
+        audioFile.delete()
+    }
+}
+
+private fun downloadAudioFile(audioUrl: String, log: Logger): File? = kotlin.runCatching {
+    val request = Request.Builder()
+        .url(audioUrl)
+        .get()
+        .build()
+    val tempFile = Files.createTempFile("suno-", ".mp3").toFile()
+
+    OkHttpClient().newCall(request).execute().use { response ->
+        if (!response.isSuccessful) {
+            error("Не удалось скачать mp3 из Suno: http=${response.code}")
+        }
+        val body = response.body ?: error("Suno вернул пустое тело при скачивании mp3")
+        tempFile.outputStream().use { output ->
+            body.byteStream().use { input -> input.copyTo(output) }
+        }
+    }
+
+    tempFile
+}
+    .onSuccess { log.info("MP3 из Suno скачан: {}", it.absolutePath) }
+    .onFailure { log.warn("Ошибка при скачивании mp3 из Suno: {}", it.message, it) }
+    .getOrNull()
 
 private fun String.escapeHtml(): String = replace("&", "&amp;")
     .replace("<", "&lt;")

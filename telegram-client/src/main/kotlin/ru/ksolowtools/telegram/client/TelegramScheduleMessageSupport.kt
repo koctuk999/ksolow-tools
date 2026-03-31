@@ -12,11 +12,11 @@ class TelegramScheduleMessageSupport(
 ) {
 
     fun morningMessage(chatId: Long): String =
-        apiClient.morningMessage(resolveStyle(chatId))
+        apiClient.morningMessage(styleService.requireStyle(chatId))
 
     fun eveningMessage(chatId: Long): StyledEveningMessage =
         apiClient.eveningMessage(
-            style = resolveStyle(chatId),
+            style = styleService.requireStyle(chatId),
             messages = dayMessageRepository.getByChatId(chatId)
         )
 
@@ -24,8 +24,4 @@ class TelegramScheduleMessageSupport(
         apiClient.eveningMessage(style, messages)
 
     fun messagesForToday(chatId: Long): List<String> = dayMessageRepository.getByChatId(chatId)
-
-    private fun resolveStyle(chatId: Long): String = requireNotNull(styleService.resolveStyleName(chatId)) {
-        "Не удалось определить стиль для чата $chatId"
-    }
 }

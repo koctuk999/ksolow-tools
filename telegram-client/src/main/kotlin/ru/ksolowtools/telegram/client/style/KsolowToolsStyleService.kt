@@ -46,6 +46,10 @@ class KsolowToolsStyleService(
         return availableStyles.firstOrNull()
     }
 
+    fun requireStyle(chatId: Long): String = requireNotNull(resolveStyleName(chatId)) {
+        "Не удалось определить стиль для чата $chatId"
+    }
+
     fun resolveRequestedStyle(requestedStyle: String): String? {
         val normalized = requestedStyle.trim().lowercase().replace(" ", "")
         return normalized.takeIf { it in availableStyles() }

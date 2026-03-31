@@ -9,5 +9,7 @@ data class StyleFile(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class StyleDefinition(
-    val systemPrompt: String = ""
+    val systemPrompt: String = "",
+    val songTextStyle: String = "",
+    val songTrackStyle: String = ""
 )

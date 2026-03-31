@@ -168,6 +168,85 @@ fun CommandHandlerEnvironment.handleCat(
     }
 }
 
+fun CommandHandlerEnvironment.handleSong(
+    songSupport: TelegramSongSupport = KsolowToolsTelegram.songSupport,
+    action: String = "Команда /song",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val chatId = ChatId.fromId(message.chat.id)
+    val replyText = message.replyToMessage?.textOrCaption()
+    if (replyText.isNullOrBlank()) {
+        bot.sendMessage(
+            chatId = chatId,
+            text = "Команду /song нужно вызывать реплаем на сообщение с текстом для песни."
+        ).also {
+            it.logTelegramResult("$action (нет реплая)", log)
+        }
+        return
+    }
+
+    val answer = songSupport.songText(message.chat.id, replyText).text
+
+    bot.sendMessageWithChunking(
+        chatId = chatId,
+        text = answer,
+        action = action,
+        log = log
+    )
+}
+
+fun CommandHandlerEnvironment.handleSuno(
+    songSupport: TelegramSongSupport = KsolowToolsTelegram.songSupport,
+    action: String = "Команда /suno",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val chatId = ChatId.fromId(message.chat.id)
+    val replyText = message.replyToMessage?.textOrCaption()
+    if (replyText.isNullOrBlank()) {
+        bot.sendMessage(
+            chatId = chatId,
+            text = "Команду /suno нужно вызывать реплаем на сообщение с промптом."
+        ).also {
+            it.logTelegramResult("$action (нет реплая)", log)
+        }
+        return
+    }
+
+    bot.sendMessage(
+        chatId = chatId,
+        text = "Отправил промпт в Suno, жду готовый mp3."
+    ).also {
+        it.logTelegramResult("$action (статус)", log)
+    }
+
+    val track = songSupport.songTrack(
+        chatId = message.chat.id,
+        prompt = replyText
+    )
+
+    if (!track.success || track.audioUrl.isNullOrBlank()) {
+        bot.sendMessage(
+            chatId = chatId,
+            text = "Suno не вернул mp3: ${track.errorMessage ?: "Неизвестная ошибка"}"
+        ).also {
+            it.logTelegramResult("$action (ошибка Suno)", log)
+        }
+        return
+    }
+
+    bot.sendAudioFromUrl(
+        chatId = chatId,
+        audioUrl = track.audioUrl,
+        performer = track.performer,
+        title = track.title,
+        duration = track.durationSeconds,
+        replyToMessageId = message.replyToMessage?.messageId?.toLong(),
+        allowSendingWithoutReply = true,
+        action = action,
+        log = log
+    )
+}
+
 internal fun resolveWeatherLocationCode(
     commandText: String?,
     aliases: Map<String, String>
@@ -185,6 +264,8 @@ internal fun resolveWeatherLocationCode(
 }
 
 private fun CommandHandlerEnvironment.rawCommandText(): String? = message.text ?: message.caption
+
+private fun com.github.kotlintelegrambot.entities.Message.textOrCaption(): String? = text ?: caption
 
 private fun CommandHandlerEnvironment.chatDisplayName(): String? =
     message.chat.title

@@ -36,6 +36,11 @@ object KsolowToolsTelegram {
                 apiClient = apiClient,
                 styleService = styleService,
                 dayMessageRepository = dayMessageRepository
+            ),
+            songSupport = TelegramSongSupport(
+                apiClient = apiClient,
+                styleService = styleService,
+                dayMessageRepository = dayMessageRepository
             )
         )
     }
@@ -55,6 +60,9 @@ object KsolowToolsTelegram {
     val scheduleMessageSupport: TelegramScheduleMessageSupport
         get() = requireState().scheduleMessageSupport
 
+    val songSupport: TelegramSongSupport
+        get() = requireState().songSupport
+
     private fun requireState(): State = requireNotNull(state) {
         "KsolowToolsTelegram is not configured. Call KsolowToolsTelegram.configure(...) first."
     }
@@ -65,6 +73,7 @@ object KsolowToolsTelegram {
         val chatStyleRepository: ChatStyleRepository,
         val dayMessageRepository: DayMessageRepository,
         val styleService: KsolowToolsStyleService,
-        val scheduleMessageSupport: TelegramScheduleMessageSupport
+        val scheduleMessageSupport: TelegramScheduleMessageSupport,
+        val songSupport: TelegramSongSupport
     )
 }

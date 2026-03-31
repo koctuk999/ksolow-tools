@@ -47,6 +47,16 @@ internal interface KsolowToolsApi {
         @Body request: StyledEveningMessageRequest
     ): Call<StyledEveningMessageResponse>
 
+    @POST("song/text/styled")
+    fun songTextStyled(
+        @Body request: StyledSongTextRequest
+    ): Call<StyledSongTextResponse>
+
+    @POST("song/track/styled")
+    fun songTrackStyled(
+        @Body request: StyledSongTrackRequest
+    ): Call<StyledSongTrackResponse>
+
     @POST("ai/proxy/request/styled")
     fun aiStyledRequest(
         @Body request: StyledAiProxyRequest
@@ -104,6 +114,33 @@ data class StyledEveningMessageRequest(
 data class StyledEveningMessageResponse(
     val text: String,
     val imageUrl: String
+)
+
+data class StyledSongTextRequest(
+    val style: String,
+    val sourceText: String
+)
+
+data class StyledSongTextResponse(
+    val style: String,
+    val text: String
+)
+
+data class StyledSongTrackRequest(
+    val style: String,
+    val prompt: String? = null,
+    val songText: String? = null
+)
+
+data class StyledSongTrackResponse(
+    val style: String,
+    val success: Boolean,
+    val performer: String,
+    val title: String? = null,
+    val audioUrl: String? = null,
+    val durationSeconds: Int? = null,
+    val lyrics: String? = null,
+    val errorMessage: String? = null
 )
 
 data class StyledAiProxyRequest(
