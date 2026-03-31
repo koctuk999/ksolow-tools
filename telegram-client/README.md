@@ -1,6 +1,7 @@
 # `telegram-client`
 
 Библиотека для Telegram-ботов на базе `kotlin-telegram-bot`, которая использует API проекта `ksolow-tools`.
+Зависимость на `kotlin-telegram-bot` экспортируется транзитивно, поэтому в приложении-потребителе ее отдельно подключать не нужно.
 
 Что есть в модуле:
 
@@ -53,6 +54,43 @@ KsolowToolsTelegram.configure(
 )
 ```
 
+Либо можно собрать всё в одном месте через DSL и сразу получить `Bot`:
+
+```kotlin
+import ru.ksolowtools.telegram.client.*
+
+@Bean
+fun telegramBot() = ksolowToolsTelegramBot {
+    serviceUrl = "http://localhost:8080"
+    mongoUrl = "mongodb://localhost:27017"
+    mongoDatabase = "kidala-bot"
+    messagesEncryptionKey = "base64-or-raw-key"
+    dayZoneId = "Europe/Moscow"
+    allowedIds = setOf(123L, 456L)
+    defaultStyle = "stebun"
+
+    bot {
+        token = "telegram-token"
+        dispatch {
+            command(BotCommand.WEATHER) {
+                forAllowedChats {
+                    handleWeather()
+                }
+            }
+
+            message {
+                forAllowedChats {
+                    cacheMessageForDay()
+                    handleDirectAddress(botUsername = "my_bot")
+                }
+            }
+        }
+    }
+}
+```
+
+Для этого DSL модуль также реэкспортирует удобные entrypoint'ы `bot`, `dispatch` и `message` из своего пакета.
+
 ### Поля `KsolowToolsTelegramClientConfig`
 
 - `serviceUrl`: base URL backend-сервиса
@@ -98,22 +136,7 @@ command(BotCommand.WEATHER) {
 ## Пример интеграции
 
 ```kotlin
-import com.github.kotlintelegrambot.bot
-import com.github.kotlintelegrambot.dispatch
-import com.github.kotlintelegrambot.dispatcher.message
-import ru.ksolowtools.telegram.client.Command
-import ru.ksolowtools.telegram.client.KsolowToolsTelegram
-import ru.ksolowtools.telegram.client.KsolowToolsTelegramClientConfig
-import ru.ksolowtools.telegram.client.cacheMessageForDay
-import ru.ksolowtools.telegram.client.command
-import ru.ksolowtools.telegram.client.forAllowedChats
-import ru.ksolowtools.telegram.client.handleCat
-import ru.ksolowtools.telegram.client.handleDay
-import ru.ksolowtools.telegram.client.handleDirectAddress
-import ru.ksolowtools.telegram.client.handleExplain
-import ru.ksolowtools.telegram.client.handleHolidays
-import ru.ksolowtools.telegram.client.handleStyle
-import ru.ksolowtools.telegram.client.handleWeather
+import ru.ksolowtools.telegram.client.*
 
 enum class BotCommand(override val value: String) : Command {
     WEATHER("weather"),
