@@ -8,7 +8,7 @@
 - экстеншены `sendMessageWithChunking` и `sendPhotoWithTruncatedCaption`
 - DSL для команд через интерфейс `Command`
 - command handlers:
-  `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleExplain`, `handleCat`
+  `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleExplain`, `handleTranslate`, `handleToday`, `handleTomorrow`, `handleCat`
 - scheduler helper: `KsolowToolsTelegram.scheduleMessageSupport`
 - text handlers:
   `cacheMessageForDay`, `handleDirectAddress`
@@ -27,6 +27,8 @@
 - `GET /tools/cat`
 - `GET /weather/current`
 - `GET /weather/current/styled`
+- `GET /day/today`
+- `GET /day/tomorrow`
 - `GET /day/holidays/today`
 - `GET /day/holidays/today/styled`
 - `POST /day/summary/styled`
@@ -34,6 +36,7 @@
 - `POST /day/evening-message/styled`
 - `POST /ai/proxy/request/styled`
 - `POST /ai/proxy/explain/styled`
+- `POST /ai/proxy/translate/styled`
 
 ## Конфигурация
 
@@ -44,12 +47,11 @@ KsolowToolsTelegram.configure(
     KsolowToolsTelegramClientConfig(
         serviceUrl = "http://localhost:8080",
         mongoUrl = "mongodb://localhost:27017",
-        mongoDatabase = "kidala-bot",
+        mongoDatabase = "example-bot",
         messagesEncryptionKey = "base64-or-raw-key",
         dayZoneId = "Europe/Moscow",
         allowedIds = setOf(123L, 456L),
-        defaultStyle = "stebun",
-        aiFallbackMessage = "Не смог ответить, попробуй еще раз."
+        defaultStyle = "swear"
     )
 )
 ```
@@ -63,11 +65,11 @@ import ru.ksolowtools.telegram.client.*
 fun telegramBot() = ksolowToolsTelegramBot {
     serviceUrl = "http://localhost:8080"
     mongoUrl = "mongodb://localhost:27017"
-    mongoDatabase = "kidala-bot"
+    mongoDatabase = "example-bot"
     messagesEncryptionKey = "base64-or-raw-key"
     dayZoneId = "Europe/Moscow"
     allowedIds = setOf(123L, 456L)
-    defaultStyle = "stebun"
+    defaultStyle = "swear"
 
     bot {
         token = "telegram-token"
@@ -100,15 +102,8 @@ fun telegramBot() = ksolowToolsTelegramBot {
 - `dayZoneId`: таймзона для `dayKey`
 - `allowedIds`: список разрешенных chat id; если пустой, фильтра нет
 - `defaultStyle`: стиль по умолчанию, если для чата стиль еще не сохранен
-- `notAllowedMessage`: текст ответа для запрещенных чатов
-- `aiFallbackMessage`: fallback для ответов AI при ошибке backend
-- `explainNeedQuestionMessage`: текст, если `/explain` вызван без вопроса
-- `weatherUnknownCityMessage`: текст, если город не распознан
-- `dayNoMessagesMessage`: текст для `/day`, если за текущий день нет сообщений
-- `styleListTemplate`: шаблон ответа `/style`
-- `styleUnknownTemplate`: шаблон ответа для неизвестного стиля
-- `styleSetSuccessTemplate`: шаблон ответа при успешной смене стиля
 - `weatherLocationAliases`: алиасы городов для `/weather`
+  По умолчанию есть алиасы для `spb` и `krasnoyarsk`.
 
 ## Команды
 
@@ -121,6 +116,9 @@ enum class BotCommand(override val value: String) : Command {
     DAY("day"),
     STYLE("style"),
     EXPLAIN("explain"),
+    TRANSLATE("translate"),
+    TODAY("today"),
+    TOMORROW("tomorrow"),
     CAT("cat")
 }
 ```
@@ -144,6 +142,9 @@ enum class BotCommand(override val value: String) : Command {
     DAY("day"),
     STYLE("style"),
     EXPLAIN("explain"),
+    TRANSLATE("translate"),
+    TODAY("today"),
+    TOMORROW("tomorrow"),
     CAT("cat")
 }
 
@@ -178,6 +179,24 @@ fun createBot(token: String, username: String) = bot {
         command(BotCommand.EXPLAIN) {
             forAllowedChats {
                 handleExplain()
+            }
+        }
+
+        command(BotCommand.TRANSLATE) {
+            forAllowedChats {
+                handleTranslate()
+            }
+        }
+
+        command(BotCommand.TODAY) {
+            forAllowedChats {
+                handleToday()
+            }
+        }
+
+        command(BotCommand.TOMORROW) {
+            forAllowedChats {
+                handleTomorrow()
             }
         }
 

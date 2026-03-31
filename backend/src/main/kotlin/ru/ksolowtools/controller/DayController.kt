@@ -12,14 +12,32 @@ import ru.ksolowtools.service.ScheduleMessageService
 import ru.ksolowtools.service.StyledDaySummaryRequest
 import ru.ksolowtools.service.StyledEveningMessageRequest
 import ru.ksolowtools.service.StyledMorningMessageRequest
+import ru.ksolowtools.service.WorkDayService
 
 @RestController
 @RequestMapping("/day")
 class DayController(
     private val dayService: DayService,
+    private val workDayService: WorkDayService,
     private val daySummaryService: DaySummaryService,
     private val scheduleMessageService: ScheduleMessageService
 ) {
+
+    @GetMapping("/today")
+    fun today() = workDayService.today()
+        ?.let { DayStatusResponse(date = it.date, status = it.status) }
+        ?: DayStatusResponse(
+            date = dayService.todayDate(),
+            status = null
+        )
+
+    @GetMapping("/tomorrow")
+    fun tomorrow() = workDayService.tomorrow()
+        ?.let { DayStatusResponse(date = it.date, status = it.status) }
+        ?: DayStatusResponse(
+            date = dayService.tomorrowDate(),
+            status = null
+        )
 
     @GetMapping("/holidays/today")
     fun holidaysToday() = dayService.holidaysTodayList()
@@ -45,3 +63,8 @@ class DayController(
         scheduleMessageService.eveningMessageStyled(request)
 
 }
+
+data class DayStatusResponse(
+    val date: String,
+    val status: String?
+)

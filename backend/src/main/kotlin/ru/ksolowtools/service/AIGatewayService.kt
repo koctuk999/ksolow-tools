@@ -40,6 +40,16 @@ class AIGatewayService(
         )
     )
 
+    fun translate(request: StyledTranslateRequest) = StyledTranslateResponse(
+        style = request.style,
+        text = aiClient.complete(
+            systemPrompt = promptService.buildSystemPrompt(request.style, "translate"),
+            userPrompt = request.text.trim(),
+            fallback = request.text.trim(),
+            options = AIRequestOptions()
+        )
+    )
+
     private fun buildStyledUserPrompt(request: StyledAIProxyRequest): String = buildString {
         appendLine("Текст сообщения:")
         appendLine(request.text.trim())
@@ -70,6 +80,11 @@ data class ExplainRequest(
     val question: String
 )
 
+data class StyledTranslateRequest(
+    val style: String,
+    val text: String
+)
+
 data class AIProxyResponse(
     val text: String
 )
@@ -80,6 +95,11 @@ data class StyledAIProxyResponse(
 )
 
 data class ExplainResponse(
+    val style: String,
+    val text: String
+)
+
+data class StyledTranslateResponse(
     val style: String,
     val text: String
 )

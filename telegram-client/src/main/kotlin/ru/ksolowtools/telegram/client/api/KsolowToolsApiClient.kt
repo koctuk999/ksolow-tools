@@ -2,6 +2,9 @@ package ru.ksolowtools.telegram.client.api
 
 import org.slf4j.LoggerFactory
 import ru.ksolowtools.telegram.client.KsolowToolsTelegramClientConfig
+import ru.ksolowtools.telegram.client.KsolowToolsTelegramMessages.AI_FALLBACK
+import ru.ksolowtools.telegram.client.KsolowToolsTelegramMessages.TODAY_UNAVAILABLE
+import ru.ksolowtools.telegram.client.KsolowToolsTelegramMessages.TOMORROW_UNAVAILABLE
 import ru.ksolowtools.telegram.client.http.RetrofitSupport
 
 class KsolowToolsApiClient(
@@ -20,6 +23,18 @@ class KsolowToolsApiClient(
     }
         .onFailure { log.warn("Не удалось получить праздники из сервиса {}", config.serviceUrl, it) }
         .getOrElse { "Не удалось получить список праздников." }
+
+    fun today(fallback: String = TODAY_UNAVAILABLE): String = runCatching {
+        api.today().execute().body().requireBody("today").status ?: error("Empty day status")
+    }
+        .onFailure { log.warn("Не удалось получить статус сегодняшнего дня из сервиса {}", config.serviceUrl, it) }
+        .getOrElse { fallback }
+
+    fun tomorrow(fallback: String = TOMORROW_UNAVAILABLE): String = runCatching {
+        api.tomorrow().execute().body().requireBody("tomorrow").status ?: error("Empty day status")
+    }
+        .onFailure { log.warn("Не удалось получить статус завтрашнего дня из сервиса {}", config.serviceUrl, it) }
+        .getOrElse { fallback }
 
     fun styles(): List<String> = runCatching {
         api.styles().execute().body().requireBody("styles").sorted()
@@ -90,7 +105,7 @@ class KsolowToolsApiClient(
         style: String,
         text: String,
         quotedText: String? = null,
-        fallback: String = config.aiFallbackMessage
+        fallback: String = AI_FALLBACK
     ): String = runCatching {
         api.aiStyledRequest(
             StyledAiProxyRequest(
@@ -106,7 +121,7 @@ class KsolowToolsApiClient(
     fun explain(
         style: String,
         question: String,
-        fallback: String = config.aiFallbackMessage
+        fallback: String = AI_FALLBACK
     ): String = runCatching {
         api.explainStyled(
             StyledExplainRequest(
@@ -116,6 +131,21 @@ class KsolowToolsApiClient(
         ).execute().body().requireBody("explainStyled").text
     }
         .onFailure { log.warn("Не удалось получить explain-ответ из сервиса {}", config.serviceUrl, it) }
+        .getOrElse { fallback }
+
+    fun translate(
+        style: String,
+        text: String,
+        fallback: String = AI_FALLBACK
+    ): String = runCatching {
+        api.translateStyled(
+            StyledTranslateRequest(
+                style = style,
+                text = text
+            )
+        ).execute().body().requireBody("translateStyled").text
+    }
+        .onFailure { log.warn("Не удалось получить translate-ответ из сервиса {}", config.serviceUrl, it) }
         .getOrElse { fallback }
 
     fun songText(style: String, sourceText: String): StyledSongText = runCatching {

@@ -47,6 +47,13 @@ enum class WeatherLocation(
         lat = "59.9342802",
         lon = "30.3350986",
         zoneId = ZoneId.of("Europe/Moscow")
+    ),
+    KRASNOYARSK(
+        code = "krasnoyarsk",
+        title = "Красноярск",
+        lat = "56.010569",
+        lon = "92.852545",
+        zoneId = ZoneId.of("Asia/Krasnoyarsk")
     );
 
     companion object {

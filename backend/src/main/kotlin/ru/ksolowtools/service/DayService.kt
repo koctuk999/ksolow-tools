@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import ru.ksolowtools.client.ai.AIClient
 import ru.ksolowtools.client.ai.AIRequestOptions
-import ru.ksolowtools.client.day.DayClient
 import ru.ksolowtools.service.TargetDay.TODAY
 import ru.ksolowtools.service.TargetDay.TOMORROW
 import ru.ksolowtools.service.style.PromptService
@@ -17,7 +16,6 @@ import java.time.format.DateTimeFormatter.ofPattern
 @Service
 class DayService(
     private val aiClient: AIClient,
-    private val dayClient: DayClient,
     private val promptService: PromptService
 ) {
 

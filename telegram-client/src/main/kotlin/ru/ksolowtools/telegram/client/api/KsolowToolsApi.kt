@@ -16,6 +16,12 @@ internal interface KsolowToolsApi {
     @GET("day/holidays/today")
     fun holidaysToday(): Call<HolidaysResponse>
 
+    @GET("day/today")
+    fun today(): Call<DayStatusResponse>
+
+    @GET("day/tomorrow")
+    fun tomorrow(): Call<DayStatusResponse>
+
     @GET("day/holidays/today/styled")
     fun holidaysTodayStyled(
         @Query("style") style: String
@@ -66,7 +72,17 @@ internal interface KsolowToolsApi {
     fun explainStyled(
         @Body request: StyledExplainRequest
     ): Call<StyledExplainResponse>
+
+    @POST("ai/proxy/translate/styled")
+    fun translateStyled(
+        @Body request: StyledTranslateRequest
+    ): Call<StyledTranslateResponse>
 }
+
+data class DayStatusResponse(
+    val date: String,
+    val status: String?
+)
 
 data class HolidaysResponse(
     val date: String,
@@ -165,6 +181,16 @@ data class StyledExplainRequest(
 )
 
 data class StyledExplainResponse(
+    val style: String,
+    val text: String
+)
+
+data class StyledTranslateRequest(
+    val style: String,
+    val text: String
+)
+
+data class StyledTranslateResponse(
     val style: String,
     val text: String
 )

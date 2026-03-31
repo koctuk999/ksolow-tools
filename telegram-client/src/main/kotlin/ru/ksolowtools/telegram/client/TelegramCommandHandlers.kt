@@ -23,7 +23,7 @@ fun CommandHandlerEnvironment.forAllowedChats(
 
     bot.sendMessage(
         chatId = ChatId.fromId(message.chat.id),
-        text = config.notAllowedMessage
+        text = KsolowToolsTelegramMessages.NOT_ALLOWED
     ).also {
         it.logTelegramResult("Запрещенный чат", log)
     }
@@ -58,7 +58,7 @@ fun CommandHandlerEnvironment.handleWeather(
 ) {
     val location = resolveWeatherLocationCode(rawCommandText(), config.weatherLocationAliases)
     val response = if (location == null) {
-        config.weatherUnknownCityMessage
+        KsolowToolsTelegramMessages.WEATHER_UNKNOWN_CITY
     } else {
         apiClient.currentWeather(location = location, style = style)
     }
@@ -76,18 +76,17 @@ fun CommandHandlerEnvironment.handleDay(
     apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
     dayMessageRepository: DayMessageRepository = KsolowToolsTelegram.dayMessageRepository,
     styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
-    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
     parseMode: ParseMode? = null,
     action: String = "Команда /day",
     log: Logger = ru.ksolowtools.telegram.client.log
 ) {
     val messages = dayMessageRepository.getByChatId(message.chat.id)
     val response = if (messages.isEmpty()) {
-        config.dayNoMessagesMessage
+        KsolowToolsTelegramMessages.DAY_NO_MESSAGES
     } else {
         val style = styleService.resolveStyleName(message.chat.id)
         if (style.isNullOrBlank()) {
-            config.dayNoMessagesMessage
+            KsolowToolsTelegramMessages.DAY_NO_MESSAGES
         } else {
             apiClient.daySummary(
                 style = style,
@@ -122,7 +121,7 @@ fun CommandHandlerEnvironment.handleStyle(
 
     val response = if (styleArg.isBlank()) {
         styleService.format(
-            template = KsolowToolsTelegram.config.styleListTemplate,
+            template = KsolowToolsTelegramMessages.STYLE_LIST_TEMPLATE,
             variables = mapOf(
                 "style" to currentStyle,
                 "styles" to availableStylesText
@@ -132,7 +131,7 @@ fun CommandHandlerEnvironment.handleStyle(
         val resolvedStyle = styleService.resolveRequestedStyle(styleArg)
         if (resolvedStyle == null) {
             styleService.format(
-                template = KsolowToolsTelegram.config.styleUnknownTemplate,
+                template = KsolowToolsTelegramMessages.STYLE_UNKNOWN_TEMPLATE,
                 variables = mapOf(
                     "style" to styleArg,
                     "styles" to availableStylesText
@@ -141,7 +140,7 @@ fun CommandHandlerEnvironment.handleStyle(
         } else {
             styleService.saveStyleForChat(chatId, chatDisplayName(), resolvedStyle)
             styleService.format(
-                template = KsolowToolsTelegram.config.styleSetSuccessTemplate,
+                template = KsolowToolsTelegramMessages.STYLE_SET_SUCCESS_TEMPLATE,
                 variables = mapOf("style" to resolvedStyle)
             )
         }
@@ -158,7 +157,6 @@ fun CommandHandlerEnvironment.handleStyle(
 fun CommandHandlerEnvironment.handleExplain(
     apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
     styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
-    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
     parseMode: ParseMode? = null,
     action: String = "Команда /explain",
     log: Logger = ru.ksolowtools.telegram.client.log
@@ -170,13 +168,13 @@ fun CommandHandlerEnvironment.handleExplain(
         .orEmpty()
 
     val response = if (question.isBlank()) {
-        config.explainNeedQuestionMessage
+        KsolowToolsTelegramMessages.EXPLAIN_NEED_QUESTION
     } else {
         val style = styleService.requireStyle(chatId)
         apiClient.explain(
             style = style,
             question = question,
-            fallback = config.aiFallbackMessage
+            fallback = KsolowToolsTelegramMessages.AI_FALLBACK
         )
     }
 
@@ -187,6 +185,59 @@ fun CommandHandlerEnvironment.handleExplain(
         log = log,
         parseMode = parseMode
     )
+}
+
+fun CommandHandlerEnvironment.handleTranslate(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
+    parseMode: ParseMode? = null,
+    action: String = "Команда /translate",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val replyText = message.replyToMessage?.textOrCaption()
+    val response = if (replyText.isNullOrBlank()) {
+        KsolowToolsTelegramMessages.TRANSLATE_NEED_REPLY
+    } else {
+        apiClient.translate(
+            style = styleService.requireStyle(message.chat.id),
+            text = replyText,
+            fallback = KsolowToolsTelegramMessages.AI_FALLBACK
+        )
+    }
+
+    bot.sendMessageWithChunking(
+        chatId = ChatId.fromId(message.chat.id),
+        text = response,
+        action = action,
+        log = log,
+        parseMode = parseMode
+    )
+}
+
+fun CommandHandlerEnvironment.handleToday(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    action: String = "Команда /today",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    bot.sendMessage(
+        chatId = ChatId.fromId(message.chat.id),
+        text = apiClient.today(KsolowToolsTelegramMessages.TODAY_UNAVAILABLE)
+    ).also {
+        it.logTelegramResult(action, log)
+    }
+}
+
+fun CommandHandlerEnvironment.handleTomorrow(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    action: String = "Команда /tomorrow",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    bot.sendMessage(
+        chatId = ChatId.fromId(message.chat.id),
+        text = apiClient.tomorrow(KsolowToolsTelegramMessages.TOMORROW_UNAVAILABLE)
+    ).also {
+        it.logTelegramResult(action, log)
+    }
 }
 
 fun CommandHandlerEnvironment.handleCat(

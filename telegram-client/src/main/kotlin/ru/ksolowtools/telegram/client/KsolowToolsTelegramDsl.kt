@@ -20,14 +20,6 @@ class KsolowToolsTelegramBotBuilder internal constructor() {
     var dayZoneId: String = "Europe/Moscow"
     var allowedIds: Set<Long> = emptySet()
     var defaultStyle: String? = null
-    var notAllowedMessage: String = "Этот чат не разрешен."
-    var aiFallbackMessage: String = "Не удалось сгенерировать ответ."
-    var explainNeedQuestionMessage: String = "Нужно написать вопрос после /explain."
-    var weatherUnknownCityMessage: String = "Для этого города пока нет прогноза."
-    var dayNoMessagesMessage: String = "Сегодня сообщений для саммари еще нет."
-    var styleListTemplate: String = "Текущий стиль: {style}\nДоступные стили: {styles}"
-    var styleUnknownTemplate: String = "Стиль '{style}' не найден. Доступные стили: {styles}"
-    var styleSetSuccessTemplate: String = "Стиль переключен на '{style}'."
     var weatherLocationAliases: Map<String, String> = DEFAULT_WEATHER_LOCATION_ALIASES
 
     private var telegramBot: Bot? = null
@@ -45,14 +37,6 @@ class KsolowToolsTelegramBotBuilder internal constructor() {
             dayZoneId = dayZoneId,
             allowedIds = allowedIds,
             defaultStyle = defaultStyle,
-            notAllowedMessage = notAllowedMessage,
-            aiFallbackMessage = aiFallbackMessage,
-            explainNeedQuestionMessage = explainNeedQuestionMessage,
-            weatherUnknownCityMessage = weatherUnknownCityMessage,
-            dayNoMessagesMessage = dayNoMessagesMessage,
-            styleListTemplate = styleListTemplate,
-            styleUnknownTemplate = styleUnknownTemplate,
-            styleSetSuccessTemplate = styleSetSuccessTemplate,
             weatherLocationAliases = weatherLocationAliases
         )
 

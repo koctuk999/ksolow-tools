@@ -15,6 +15,7 @@ private const val DEFAULT_ZONE_ID = "Europe/Moscow"
 class ScheduleMessageService(
     private val aiClient: AIClient,
     private val dayService: DayService,
+    private val workDayService: WorkDayService,
     private val catClient: CatClient,
     private val promptService: PromptService
 ) {
@@ -23,12 +24,13 @@ class ScheduleMessageService(
         val zoneId = request.zoneId.toZoneId()
         val now = ZonedDateTime.now(zoneId)
         val holidays = dayService.holidaysTodayList().holidays
-        val fallback = fallbackMorningMessage(now, holidays)
+        val workDayStatus = workDayService.today()
+        val fallback = fallbackMorningMessage(now, holidays, workDayStatus)
 
         return StyledMorningMessageResponse(
             text = aiClient.complete(
                 systemPrompt = promptService.buildSystemPrompt(request.style, "morning"),
-                userPrompt = buildMorningPrompt(now, holidays, zoneId),
+                userPrompt = buildMorningPrompt(now, holidays, workDayStatus, zoneId),
                 fallback = fallback,
                 options = AIRequestOptions()
             )
@@ -36,12 +38,13 @@ class ScheduleMessageService(
     }
 
     fun eveningMessageStyled(request: StyledEveningMessageRequest): StyledEveningMessageResponse {
-        val fallback = fallbackEveningMessage(request.messages)
+        val tomorrowStatus = workDayService.tomorrow()
+        val fallback = fallbackEveningMessage(request.messages, tomorrowStatus)
 
         return StyledEveningMessageResponse(
             text = aiClient.complete(
                 systemPrompt = promptService.buildSystemPrompt(request.style, "evening"),
-                userPrompt = buildEveningPrompt(request.messages),
+                userPrompt = buildEveningPrompt(request.messages, tomorrowStatus),
                 fallback = fallback,
                 options = AIRequestOptions()
             ),
@@ -52,10 +55,12 @@ class ScheduleMessageService(
     private fun buildMorningPrompt(
         now: ZonedDateTime,
         holidays: List<String>,
+        workDayStatus: WorkDayStatus?,
         zoneId: ZoneId
     ): String = buildString {
         appendLine("Дата/время (${zoneId.id}): ${now.format(MORNING_FORMATTER)}")
         appendLine("Приветствие: ${morningGreeting(now.hour)}")
+        appendLine("Статус дня: ${workDayStatus?.status ?: "Не удалось определить"}")
         appendLine("Пожелание: Хорошего дня!")
         appendLine("Список праздников:")
         if (holidays.isEmpty()) {
@@ -65,7 +70,8 @@ class ScheduleMessageService(
         }
     }.trim()
 
-    private fun buildEveningPrompt(messages: List<String>): String = buildString {
+    private fun buildEveningPrompt(messages: List<String>, tomorrowStatus: WorkDayStatus?): String = buildString {
+        appendLine("Статус завтрашнего дня: ${tomorrowStatus?.status ?: "Не удалось определить"}")
         appendLine("Сообщения за день:")
         if (messages.isEmpty()) {
             appendLine("— Сегодня в чате не было сохраненных сообщений")
@@ -80,10 +86,12 @@ class ScheduleMessageService(
 
     private fun fallbackMorningMessage(
         now: ZonedDateTime,
-        holidays: List<String>
+        holidays: List<String>,
+        workDayStatus: WorkDayStatus?
     ): String = buildString {
         appendLine(morningGreeting(now.hour))
         appendLine("Дата/время (${now.zone.id}): ${now.format(MORNING_FORMATTER)}")
+        appendLine("Статус дня: ${workDayStatus?.status ?: "Не удалось определить"}")
         appendLine("Хорошего дня!")
         appendLine("Сегодня празднуют:")
         if (holidays.isEmpty()) {
@@ -93,8 +101,9 @@ class ScheduleMessageService(
         }
     }.trim()
 
-    private fun fallbackEveningMessage(messages: List<String>): String = buildString {
+    private fun fallbackEveningMessage(messages: List<String>, tomorrowStatus: WorkDayStatus?): String = buildString {
         appendLine("Итоги дня:")
+        appendLine("Статус завтрашнего дня: ${tomorrowStatus?.status ?: "Не удалось определить"}")
         if (messages.isEmpty()) {
             appendLine("— Сегодня в чате было тихо, но это тоже результат.")
         } else {

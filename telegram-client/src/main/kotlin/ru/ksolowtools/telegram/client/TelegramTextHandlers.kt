@@ -23,7 +23,7 @@ fun MessageHandlerEnvironment.forAllowedChats(
 
     bot.sendMessage(
         chatId = ChatId.fromId(message.chat.id),
-        text = config.notAllowedMessage
+        text = KsolowToolsTelegramMessages.NOT_ALLOWED
     ).also {
         it.logTelegramResult("Запрещенный чат", log)
     }
@@ -52,7 +52,6 @@ fun MessageHandlerEnvironment.handleDirectAddress(
     botUsername: String,
     apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
     styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
-    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
     parseMode: ParseMode? = null,
     action: String = "Ответ на обращение",
     log: Logger = ru.ksolowtools.telegram.client.log
@@ -88,7 +87,7 @@ fun MessageHandlerEnvironment.handleDirectAddress(
         style = style,
         text = userText,
         quotedText = repliedMessage?.textOrCaption(),
-        fallback = config.aiFallbackMessage
+        fallback = KsolowToolsTelegramMessages.AI_FALLBACK
     )
 
     bot.sendMessageWithChunking(

@@ -15,32 +15,42 @@ class DayClient : HttpClient(
     private val api = retrofit.create(DayApi::class.java)
 
     private fun getDay(action: () -> Int?) = kotlin.runCatching {
-        when (action()) {
-            0, 4 -> "Рабочий день"
-            1 -> "Выходной день"
-            2 -> "Сокращенный рабочий день"
-            else -> null
-        }
-
+        action()
+            ?.let(::toDayStatus)
     }
-        .onSuccess { log.info("Статус дня получен:$it") }
+        .onSuccess { log.info("Статус дня получен:{}", it) }
         .onFailure { log.warn("Произошла ошибка при получении статуса:${it.message}", it) }
         .getOrNull()
 
-    fun today() = getDay {
+    fun todayStatus() = getDay {
         api
             .today()
             .execute()
             .body()
     }
 
-    fun tomorrow() = getDay {
+    fun tomorrowStatus() = getDay {
         api
             .tomorrow()
             .execute()
             .body()
     }
 
+    fun today() = todayStatus()?.text
+
+    fun tomorrow() = tomorrowStatus()?.text
+
+    private fun toDayStatus(code: Int): DayStatus? = when (code) {
+        0, 4 -> DayStatus(code = code, text = "Рабочий день")
+        1 -> DayStatus(code = code, text = "Выходной день")
+        2 -> DayStatus(code = code, text = "Сокращенный рабочий день")
+        else -> null
+    }
+
 }
 
+data class DayStatus(
+    val code: Int,
+    val text: String
+)
 
