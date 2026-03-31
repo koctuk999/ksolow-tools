@@ -61,6 +61,11 @@ internal interface KsolowToolsApi {
     fun aiStyledRequest(
         @Body request: StyledAiProxyRequest
     ): Call<StyledAiProxyResponse>
+
+    @POST("ai/proxy/explain/styled")
+    fun explainStyled(
+        @Body request: StyledExplainRequest
+    ): Call<StyledExplainResponse>
 }
 
 data class HolidaysResponse(
@@ -150,6 +155,16 @@ data class StyledAiProxyRequest(
 )
 
 data class StyledAiProxyResponse(
+    val style: String,
+    val text: String
+)
+
+data class StyledExplainRequest(
+    val style: String,
+    val question: String
+)
+
+data class StyledExplainResponse(
     val style: String,
     val text: String
 )

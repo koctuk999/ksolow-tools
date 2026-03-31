@@ -155,6 +155,40 @@ fun CommandHandlerEnvironment.handleStyle(
     )
 }
 
+fun CommandHandlerEnvironment.handleExplain(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    styleService: KsolowToolsStyleService = KsolowToolsTelegram.styleService,
+    config: KsolowToolsTelegramClientConfig = KsolowToolsTelegram.config,
+    parseMode: ParseMode? = null,
+    action: String = "Команда /explain",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val chatId = message.chat.id
+    val question = rawCommandText()
+        ?.substringAfter(' ', "")
+        ?.trim()
+        .orEmpty()
+
+    val response = if (question.isBlank()) {
+        config.explainNeedQuestionMessage
+    } else {
+        val style = styleService.requireStyle(chatId)
+        apiClient.explain(
+            style = style,
+            question = question,
+            fallback = config.aiFallbackMessage
+        )
+    }
+
+    bot.sendMessageWithChunking(
+        chatId = ChatId.fromId(chatId),
+        text = response,
+        action = action,
+        log = log,
+        parseMode = parseMode
+    )
+}
+
 fun CommandHandlerEnvironment.handleCat(
     apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
     action: String = "Команда /cat",

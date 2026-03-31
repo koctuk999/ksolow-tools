@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import ru.ksolowtools.service.AIGatewayService
 import ru.ksolowtools.service.AIProxyRequest
+import ru.ksolowtools.service.ExplainRequest
 import ru.ksolowtools.service.StyledAIProxyRequest
 
 @RestController
@@ -21,4 +22,9 @@ class AiGatewayController(private val aiGatewayService: AIGatewayService) {
     fun styledRequest(
         @RequestBody request: StyledAIProxyRequest
     ) = aiGatewayService.sendStyledRequest(request)
+
+    @PostMapping("/explain/styled")
+    fun styledExplain(
+        @RequestBody request: ExplainRequest
+    ) = aiGatewayService.explain(request)
 }

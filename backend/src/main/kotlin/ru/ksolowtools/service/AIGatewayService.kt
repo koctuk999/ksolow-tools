@@ -30,6 +30,16 @@ class AIGatewayService(
         )
     )
 
+    fun explain(request: ExplainRequest) = ExplainResponse(
+        style = request.style,
+        text = aiClient.complete(
+            systemPrompt = promptService.buildSystemPrompt(request.style, "explain"),
+            userPrompt = request.question.trim(),
+            fallback = request.question.trim(),
+            options = AIRequestOptions()
+        )
+    )
+
     private fun buildStyledUserPrompt(request: StyledAIProxyRequest): String = buildString {
         appendLine("Текст сообщения:")
         appendLine(request.text.trim())
@@ -55,11 +65,21 @@ data class StyledAIProxyRequest(
     val content: String? = null
 )
 
+data class ExplainRequest(
+    val style: String,
+    val question: String
+)
+
 data class AIProxyResponse(
     val text: String
 )
 
 data class StyledAIProxyResponse(
+    val style: String,
+    val text: String
+)
+
+data class ExplainResponse(
     val style: String,
     val text: String
 )

@@ -7,7 +7,7 @@
 - экстеншены `sendMessageWithChunking` и `sendPhotoWithTruncatedCaption`
 - DSL для команд через интерфейс `Command`
 - command handlers:
-  `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleCat`
+  `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleExplain`, `handleCat`
 - scheduler helper: `KsolowToolsTelegram.scheduleMessageSupport`
 - text handlers:
   `cacheMessageForDay`, `handleDirectAddress`
@@ -32,6 +32,7 @@
 - `POST /day/morning-message/styled`
 - `POST /day/evening-message/styled`
 - `POST /ai/proxy/request/styled`
+- `POST /ai/proxy/explain/styled`
 
 ## Конфигурация
 
@@ -63,6 +64,7 @@ KsolowToolsTelegram.configure(
 - `defaultStyle`: стиль по умолчанию, если для чата стиль еще не сохранен
 - `notAllowedMessage`: текст ответа для запрещенных чатов
 - `aiFallbackMessage`: fallback для ответов AI при ошибке backend
+- `explainNeedQuestionMessage`: текст, если `/explain` вызван без вопроса
 - `weatherUnknownCityMessage`: текст, если город не распознан
 - `dayNoMessagesMessage`: текст для `/day`, если за текущий день нет сообщений
 - `styleListTemplate`: шаблон ответа `/style`
@@ -80,6 +82,7 @@ enum class BotCommand(override val value: String) : Command {
     HOLIDAYS("holidays"),
     DAY("day"),
     STYLE("style"),
+    EXPLAIN("explain"),
     CAT("cat")
 }
 ```
@@ -107,6 +110,7 @@ import ru.ksolowtools.telegram.client.forAllowedChats
 import ru.ksolowtools.telegram.client.handleCat
 import ru.ksolowtools.telegram.client.handleDay
 import ru.ksolowtools.telegram.client.handleDirectAddress
+import ru.ksolowtools.telegram.client.handleExplain
 import ru.ksolowtools.telegram.client.handleHolidays
 import ru.ksolowtools.telegram.client.handleStyle
 import ru.ksolowtools.telegram.client.handleWeather
@@ -116,6 +120,7 @@ enum class BotCommand(override val value: String) : Command {
     HOLIDAYS("holidays"),
     DAY("day"),
     STYLE("style"),
+    EXPLAIN("explain"),
     CAT("cat")
 }
 
@@ -144,6 +149,12 @@ fun createBot(token: String, username: String) = bot {
         command(BotCommand.STYLE) {
             forAllowedChats {
                 handleStyle()
+            }
+        }
+
+        command(BotCommand.EXPLAIN) {
+            forAllowedChats {
+                handleExplain()
             }
         }
 

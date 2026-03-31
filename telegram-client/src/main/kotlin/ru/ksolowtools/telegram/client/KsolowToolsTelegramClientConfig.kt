@@ -10,6 +10,7 @@ data class KsolowToolsTelegramClientConfig(
     val defaultStyle: String? = null,
     val notAllowedMessage: String = "Этот чат не разрешен.",
     val aiFallbackMessage: String = "Не удалось сгенерировать ответ.",
+    val explainNeedQuestionMessage: String = "Нужно написать вопрос после /explain.",
     val weatherUnknownCityMessage: String = "Для этого города пока нет прогноза.",
     val dayNoMessagesMessage: String = "Сегодня сообщений для саммари еще нет.",
     val styleListTemplate: String = "Текущий стиль: {style}\nДоступные стили: {styles}",

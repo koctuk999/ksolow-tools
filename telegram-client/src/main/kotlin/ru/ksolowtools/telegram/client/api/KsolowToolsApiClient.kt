@@ -103,6 +103,21 @@ class KsolowToolsApiClient(
         .onFailure { log.warn("Не удалось получить AI-ответ из сервиса {}", config.serviceUrl, it) }
         .getOrElse { fallback }
 
+    fun explain(
+        style: String,
+        question: String,
+        fallback: String = config.aiFallbackMessage
+    ): String = runCatching {
+        api.explainStyled(
+            StyledExplainRequest(
+                style = style,
+                question = question
+            )
+        ).execute().body().requireBody("explainStyled").text
+    }
+        .onFailure { log.warn("Не удалось получить explain-ответ из сервиса {}", config.serviceUrl, it) }
+        .getOrElse { fallback }
+
     fun songText(style: String, sourceText: String): StyledSongText = runCatching {
         api.songTextStyled(
             StyledSongTextRequest(
