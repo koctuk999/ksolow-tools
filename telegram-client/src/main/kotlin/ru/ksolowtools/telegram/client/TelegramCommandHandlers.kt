@@ -297,9 +297,7 @@ internal fun resolveWeatherLocationCode(
     }
 }
 
-private fun CommandHandlerEnvironment.rawCommandText(): String? = message.text ?: message.caption
-
-private fun com.github.kotlintelegrambot.entities.Message.textOrCaption(): String? = text ?: caption
+private fun CommandHandlerEnvironment.rawCommandText(): String? = message.textOrCaption()
 
 private fun CommandHandlerEnvironment.chatDisplayName(): String? =
     message.chat.title

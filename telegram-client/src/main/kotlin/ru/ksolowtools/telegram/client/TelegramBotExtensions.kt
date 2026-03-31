@@ -2,6 +2,7 @@ package ru.ksolowtools.telegram.client
 
 import com.github.kotlintelegrambot.Bot
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.entities.ParseMode
 import com.github.kotlintelegrambot.entities.TelegramFile
 import com.github.kotlintelegrambot.entities.TelegramFile.ByFile
@@ -149,6 +150,10 @@ fun Bot.sendAudioFromUrl(
         audioFile.delete()
     }
 }
+
+fun Message.textOrCaption(): String? = sequenceOf(text, caption)
+    .mapNotNull { it?.trim() }
+    .firstOrNull { it.isNotBlank() }
 
 private fun downloadAudioFile(audioUrl: String, log: Logger): File? = kotlin.runCatching {
     val request = Request.Builder()

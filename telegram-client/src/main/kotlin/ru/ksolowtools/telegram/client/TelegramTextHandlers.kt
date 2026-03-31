@@ -101,6 +101,4 @@ fun MessageHandlerEnvironment.handleDirectAddress(
     return true
 }
 
-private fun MessageHandlerEnvironment.textOrCaption(): String? = message.text ?: message.caption
-
-private fun Message.textOrCaption(): String? = text ?: caption
+private fun MessageHandlerEnvironment.textOrCaption(): String? = message.textOrCaption()
