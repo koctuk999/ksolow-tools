@@ -8,7 +8,7 @@
 - экстеншены `sendMessageWithChunking` и `sendPhotoWithTruncatedCaption`
 - DSL для команд через интерфейс `Command`
 - command handlers:
-  `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleExplain`, `handleTranslate`, `handleToday`, `handleTomorrow`, `handleCat`
+  `handleWeather`, `handleHolidays`, `handleDay`, `handleStyle`, `handleExplain`, `handleTranslate`, `handleImage`, `handleToday`, `handleTomorrow`, `handleCat`
 - scheduler helper: `KsolowToolsTelegram.scheduleMessageSupport`
 - text handlers:
   `cacheMessageForDay`, `handleDirectAddress`
@@ -37,6 +37,7 @@
 - `POST /ai/proxy/request/styled`
 - `POST /ai/proxy/explain/styled`
 - `POST /ai/proxy/translate/styled`
+- `POST /ai/proxy/image`
 
 ## Конфигурация
 
@@ -117,6 +118,7 @@ enum class BotCommand(override val value: String) : Command {
     STYLE("style"),
     EXPLAIN("explain"),
     TRANSLATE("translate"),
+    IMAGE("image"),
     TODAY("today"),
     TOMORROW("tomorrow"),
     CAT("cat")
@@ -143,6 +145,7 @@ enum class BotCommand(override val value: String) : Command {
     STYLE("style"),
     EXPLAIN("explain"),
     TRANSLATE("translate"),
+    IMAGE("image"),
     TODAY("today"),
     TOMORROW("tomorrow"),
     CAT("cat")
@@ -185,6 +188,12 @@ fun createBot(token: String, username: String) = bot {
         command(BotCommand.TRANSLATE) {
             forAllowedChats {
                 handleTranslate()
+            }
+        }
+
+        command(BotCommand.IMAGE) {
+            forAllowedChats {
+                handleImage()
             }
         }
 

@@ -5,6 +5,8 @@ internal object KsolowToolsTelegramMessages {
     const val AI_FALLBACK = "Не удалось сгенерировать ответ."
     const val TRANSLATE_NEED_REPLY = "Команду /translate нужно вызывать реплаем на сообщение."
     const val EXPLAIN_NEED_QUESTION = "Нужно написать вопрос после /explain."
+    const val IMAGE_NEED_PROMPT = "Нужно написать описание после /image или вызвать команду реплаем на сообщение."
+    const val IMAGE_FALLBACK = "Не удалось сгенерировать изображение."
     const val TODAY_UNAVAILABLE = "Не удалось получить статус дня."
     const val TOMORROW_UNAVAILABLE = "Не удалось получить статус дня."
     const val WEATHER_UNKNOWN_CITY = "Для этого города пока нет прогноза."

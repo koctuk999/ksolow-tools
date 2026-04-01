@@ -3,12 +3,14 @@ package ru.ksolowtools.service
 import org.springframework.stereotype.Service
 import ru.ksolowtools.client.ai.AIClient
 import ru.ksolowtools.client.ai.AIRequestOptions
+import ru.ksolowtools.client.ai.aitunnel.AitunnelImageClient
 import ru.ksolowtools.service.style.PromptService
 
 @Service
 class AIGatewayService(
     private val aiClient: AIClient,
-    private val promptService: PromptService
+    private val promptService: PromptService,
+    private val aitunnelImageClient: AitunnelImageClient
 ) {
 
     fun sendRequest(request: AIProxyRequest) = AIProxyResponse(
@@ -50,6 +52,14 @@ class AIGatewayService(
         )
     )
 
+    fun generateImage(request: ImageGenerationRequest) = ImageGenerationResponse(
+        prompt = request.prompt.trim(),
+        imageUrl = aitunnelImageClient.generate(
+            prompt = request.prompt.trim(),
+            fallback = null
+        )
+    )
+
     private fun buildStyledUserPrompt(request: StyledAIProxyRequest): String = buildString {
         appendLine("Текст сообщения:")
         appendLine(request.text.trim())
@@ -85,6 +95,10 @@ data class StyledTranslateRequest(
     val text: String
 )
 
+data class ImageGenerationRequest(
+    val prompt: String
+)
+
 data class AIProxyResponse(
     val text: String
 )
@@ -102,4 +116,9 @@ data class ExplainResponse(
 data class StyledTranslateResponse(
     val style: String,
     val text: String
+)
+
+data class ImageGenerationResponse(
+    val prompt: String,
+    val imageUrl: String? = null
 )

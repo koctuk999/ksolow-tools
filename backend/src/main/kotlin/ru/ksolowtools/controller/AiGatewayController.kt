@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController
 import ru.ksolowtools.service.AIGatewayService
 import ru.ksolowtools.service.AIProxyRequest
 import ru.ksolowtools.service.ExplainRequest
+import ru.ksolowtools.service.ImageGenerationRequest
 import ru.ksolowtools.service.StyledTranslateRequest
 import ru.ksolowtools.service.StyledAIProxyRequest
 
@@ -33,4 +34,9 @@ class AiGatewayController(private val aiGatewayService: AIGatewayService) {
     fun styledTranslate(
         @RequestBody request: StyledTranslateRequest
     ) = aiGatewayService.translate(request)
+
+    @PostMapping("/image")
+    fun generateImage(
+        @RequestBody request: ImageGenerationRequest
+    ) = aiGatewayService.generateImage(request)
 }

@@ -214,6 +214,48 @@ fun CommandHandlerEnvironment.handleTranslate(
     )
 }
 
+fun CommandHandlerEnvironment.handleImage(
+    apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
+    action: String = "Команда /image",
+    log: Logger = ru.ksolowtools.telegram.client.log
+) {
+    val chatId = ChatId.fromId(message.chat.id)
+    val inlinePrompt = rawCommandText()
+        ?.substringAfter(' ', "")
+        ?.trim()
+        .orEmpty()
+    val replyPrompt = message.replyToMessage?.textOrCaption().orEmpty()
+    val prompt = inlinePrompt.ifBlank { replyPrompt }.trim()
+
+    if (prompt.isBlank()) {
+        bot.sendMessage(
+            chatId = chatId,
+            text = KsolowToolsTelegramMessages.IMAGE_NEED_PROMPT
+        ).also {
+            it.logTelegramResult("$action (нет промпта)", log)
+        }
+        return
+    }
+
+    val imageUrl = apiClient.generateImage(prompt)
+    if (imageUrl.isNullOrBlank()) {
+        bot.sendMessage(
+            chatId = chatId,
+            text = KsolowToolsTelegramMessages.IMAGE_FALLBACK
+        ).also {
+            it.logTelegramResult("$action (ошибка генерации)", log)
+        }
+        return
+    }
+
+    bot.sendPhoto(
+        chatId = chatId,
+        photo = ByUrl(imageUrl)
+    ).also {
+        it.logTelegramCall(action, log)
+    }
+}
+
 fun CommandHandlerEnvironment.handleToday(
     apiClient: KsolowToolsApiClient = KsolowToolsTelegram.apiClient,
     action: String = "Команда /today",

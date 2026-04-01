@@ -148,6 +148,16 @@ class KsolowToolsApiClient(
         .onFailure { log.warn("Не удалось получить translate-ответ из сервиса {}", config.serviceUrl, it) }
         .getOrElse { fallback }
 
+    fun generateImage(prompt: String): String? = runCatching {
+        api.generateImage(
+            ImageGenerationRequest(
+                prompt = prompt
+            )
+        ).execute().body().requireBody("generateImage").imageUrl
+    }
+        .onFailure { log.warn("Не удалось получить image-ответ из сервиса {}", config.serviceUrl, it) }
+        .getOrNull()
+
     fun songText(style: String, sourceText: String): StyledSongText = runCatching {
         api.songTextStyled(
             StyledSongTextRequest(

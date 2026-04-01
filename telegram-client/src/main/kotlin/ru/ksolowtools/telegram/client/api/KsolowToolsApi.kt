@@ -77,6 +77,11 @@ internal interface KsolowToolsApi {
     fun translateStyled(
         @Body request: StyledTranslateRequest
     ): Call<StyledTranslateResponse>
+
+    @POST("ai/proxy/image")
+    fun generateImage(
+        @Body request: ImageGenerationRequest
+    ): Call<ImageGenerationResponse>
 }
 
 data class DayStatusResponse(
@@ -193,6 +198,15 @@ data class StyledTranslateRequest(
 data class StyledTranslateResponse(
     val style: String,
     val text: String
+)
+
+data class ImageGenerationRequest(
+    val prompt: String
+)
+
+data class ImageGenerationResponse(
+    val prompt: String,
+    val imageUrl: String? = null
 )
 
 data class CatResponse(

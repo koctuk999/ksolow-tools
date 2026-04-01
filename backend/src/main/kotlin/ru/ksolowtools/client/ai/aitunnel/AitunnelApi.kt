@@ -29,10 +29,35 @@ data class AitunnelRequest(
     val max_tokens: Int = 1000
 )
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class AitunnelImageGenerationResponse(
+    val data: List<AitunnelGeneratedImage> = emptyList()
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class AitunnelGeneratedImage(
+    val url: String? = null,
+    val b64_json: String? = null
+)
+
+data class AitunnelImageGenerationRequest(
+    val model: String,
+    val prompt: String,
+    val n: Int = 1,
+    val size: String = "1024x1024",
+    val quality: String = "low"
+)
+
 interface AitunnelApi {
     @POST("chat/completions")
     fun chatCompletions(
         @Header("Authorization") authorization: String,
         @Body request: AitunnelRequest
     ): Call<AitunnelResponse>
+
+    @POST("images/generations")
+    fun imageGenerations(
+        @Header("Authorization") authorization: String,
+        @Body request: AitunnelImageGenerationRequest
+    ): Call<AitunnelImageGenerationResponse>
 }
