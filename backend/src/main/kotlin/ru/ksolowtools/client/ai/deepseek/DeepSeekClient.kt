@@ -4,10 +4,12 @@ import ru.ksolowtools.client.HttpClient
 import ru.ksolowtools.client.ai.AIClient
 import ru.ksolowtools.client.ai.AIRequestOptions
 import org.apache.logging.log4j.LogManager.getLogger
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 @Service
+@ConditionalOnProperty(name = ["ai.provider"], havingValue = "deepseek", matchIfMissing = true)
 class DeepSeekClient(
     @Value("\${deepseek.api-key}")
     private val apiKey: String
