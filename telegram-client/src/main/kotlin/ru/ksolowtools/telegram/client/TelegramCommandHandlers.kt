@@ -237,8 +237,8 @@ fun CommandHandlerEnvironment.handleImage(
         return
     }
 
-    val imageUrl = apiClient.generateImage(prompt)
-    if (imageUrl.isNullOrBlank()) {
+    val image = apiClient.generateImage(prompt)
+    if (image == null || (image.imageUrl.isNullOrBlank() && image.imageBase64.isNullOrBlank())) {
         bot.sendMessage(
             chatId = chatId,
             text = KsolowToolsTelegramMessages.IMAGE_FALLBACK
@@ -248,12 +248,23 @@ fun CommandHandlerEnvironment.handleImage(
         return
     }
 
-    bot.sendPhoto(
-        chatId = chatId,
-        photo = ByUrl(imageUrl)
-    ).also {
-        it.logTelegramCall(action, log)
+    val imageUrl = image.imageUrl
+    if (!imageUrl.isNullOrBlank()) {
+        bot.sendPhoto(
+            chatId = chatId,
+            photo = ByUrl(imageUrl)
+        ).also {
+            it.logTelegramCall(action, log)
+        }
+        return
     }
+
+    bot.sendPhotoFromBase64(
+        chatId = chatId,
+        imageBase64 = image.imageBase64.orEmpty(),
+        action = action,
+        log = log
+    )
 }
 
 fun CommandHandlerEnvironment.handleToday(

@@ -52,13 +52,18 @@ class AIGatewayService(
         )
     )
 
-    fun generateImage(request: ImageGenerationRequest) = ImageGenerationResponse(
-        prompt = request.prompt.trim(),
-        imageUrl = aitunnelImageClient.generate(
-            prompt = request.prompt.trim(),
+    fun generateImage(request: ImageGenerationRequest): ImageGenerationResponse {
+        val prompt = request.prompt.trim()
+        val image = aitunnelImageClient.generate(
+            prompt = prompt,
             fallback = null
         )
-    )
+        return ImageGenerationResponse(
+            prompt = prompt,
+            imageUrl = image?.url,
+            imageBase64 = image?.base64
+        )
+    }
 
     private fun buildStyledUserPrompt(request: StyledAIProxyRequest): String = buildString {
         appendLine("Текст сообщения:")
@@ -120,5 +125,6 @@ data class StyledTranslateResponse(
 
 data class ImageGenerationResponse(
     val prompt: String,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val imageBase64: String? = null
 )

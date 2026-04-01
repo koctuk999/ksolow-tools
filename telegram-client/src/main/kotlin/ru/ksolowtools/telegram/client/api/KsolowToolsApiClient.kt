@@ -148,12 +148,12 @@ class KsolowToolsApiClient(
         .onFailure { log.warn("Не удалось получить translate-ответ из сервиса {}", config.serviceUrl, it) }
         .getOrElse { fallback }
 
-    fun generateImage(prompt: String): String? = runCatching {
+    fun generateImage(prompt: String): GeneratedImage? = runCatching {
         api.generateImage(
             ImageGenerationRequest(
                 prompt = prompt
             )
-        ).execute().body().requireBody("generateImage").imageUrl
+        ).execute().body().requireBody("generateImage").toModel()
     }
         .onFailure { log.warn("Не удалось получить image-ответ из сервиса {}", config.serviceUrl, it) }
         .getOrNull()
@@ -235,6 +235,11 @@ class KsolowToolsApiClient(
     }
 }
 
+private fun ImageGenerationResponse.toModel(): GeneratedImage = GeneratedImage(
+    imageUrl = imageUrl,
+    imageBase64 = imageBase64
+)
+
 private fun <T> T?.requireBody(action: String): T = requireNotNull(this) {
     "Empty response body for $action"
 }
@@ -258,4 +263,9 @@ data class StyledSongTrack(
     val durationSeconds: Int? = null,
     val lyrics: String? = null,
     val errorMessage: String? = null
+)
+
+data class GeneratedImage(
+    val imageUrl: String? = null,
+    val imageBase64: String? = null
 )

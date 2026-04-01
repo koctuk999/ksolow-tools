@@ -14,6 +14,7 @@ import okhttp3.Request
 import retrofit2.Response as RetrofitResponse
 import java.io.File
 import java.nio.file.Files
+import java.util.Base64
 
 fun <T> TelegramBotResult<T>.logTelegramResult(action: String, log: Logger) {
     fold(
@@ -151,6 +152,35 @@ fun Bot.sendAudioFromUrl(
     }
 }
 
+fun Bot.sendPhotoFromBase64(
+    chatId: ChatId,
+    imageBase64: String,
+    action: String,
+    log: Logger
+) {
+    val imageFile = decodeBase64ImageFile(imageBase64, log)
+    if (imageFile == null) {
+        sendMessage(
+            chatId = chatId,
+            text = "Изображение сгенерировано, но декодировать его не удалось."
+        ).also {
+            it.logTelegramResult("$action (ошибка декодирования)", log)
+        }
+        return
+    }
+
+    try {
+        sendPhoto(
+            chatId = chatId,
+            photo = ByFile(imageFile)
+        ).also { call ->
+            call.logTelegramCall("$action (отправка файла)", log)
+        }
+    } finally {
+        imageFile.delete()
+    }
+}
+
 fun Message.textOrCaption(): String? = sequenceOf(text, caption)
     .mapNotNull { it?.trim() }
     .firstOrNull { it.isNotBlank() }
@@ -176,6 +206,16 @@ private fun downloadAudioFile(audioUrl: String, log: Logger): File? = kotlin.run
 }
     .onSuccess { log.info("MP3 из Suno скачан: {}", it.absolutePath) }
     .onFailure { log.warn("Ошибка при скачивании mp3 из Suno: {}", it.message, it) }
+    .getOrNull()
+
+private fun decodeBase64ImageFile(imageBase64: String, log: Logger): File? = kotlin.runCatching {
+    val bytes = Base64.getDecoder().decode(imageBase64)
+    Files.createTempFile("aitunnel-image-", ".png").toFile().apply {
+        outputStream().use { it.write(bytes) }
+    }
+}
+    .onSuccess { log.info("Изображение из base64 декодировано: {}", it.absolutePath) }
+    .onFailure { log.warn("Ошибка при декодировании изображения из base64: {}", it.message, it) }
     .getOrNull()
 
 private fun String.escapeHtml(): String = replace("&", "&amp;")

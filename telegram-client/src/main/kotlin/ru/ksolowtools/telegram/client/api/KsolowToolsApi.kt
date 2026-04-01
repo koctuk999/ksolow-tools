@@ -206,7 +206,8 @@ data class ImageGenerationRequest(
 
 data class ImageGenerationResponse(
     val prompt: String,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val imageBase64: String? = null
 )
 
 data class CatResponse(
