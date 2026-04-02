@@ -61,7 +61,12 @@ internal interface KsolowToolsApi {
     @POST("song/track/styled")
     fun songTrackStyled(
         @Body request: StyledSongTrackRequest
-    ): Call<StyledSongTrackResponse>
+    ): Call<StyledSongTrackTaskResponse>
+
+    @GET("song/track/styled/status")
+    fun songTrackStatus(
+        @Query("taskId") taskId: String
+    ): Call<StyledSongTrackStatusResponse>
 
     @POST("ai/proxy/request/styled")
     fun aiStyledRequest(
@@ -158,15 +163,28 @@ data class StyledSongTrackRequest(
     val songText: String? = null
 )
 
-data class StyledSongTrackResponse(
+data class StyledSongTrackTaskResponse(
     val style: String,
     val success: Boolean,
     val performer: String,
-    val title: String? = null,
-    val audioUrl: String? = null,
-    val durationSeconds: Int? = null,
+    val taskId: String? = null,
     val lyrics: String? = null,
     val errorMessage: String? = null
+)
+
+data class StyledSongTrackStatusResponse(
+    val taskId: String,
+    val complete: Boolean,
+    val success: Boolean,
+    val tracks: List<StyledSongTrackItem> = emptyList(),
+    val errorMessage: String? = null
+)
+
+data class StyledSongTrackItem(
+    val audioUrl: String,
+    val imageUrl: String? = null,
+    val title: String,
+    val durationSeconds: Int? = null
 )
 
 data class StyledAiProxyRequest(

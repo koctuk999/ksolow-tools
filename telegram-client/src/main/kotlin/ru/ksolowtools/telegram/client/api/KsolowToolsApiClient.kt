@@ -174,11 +174,11 @@ class KsolowToolsApiClient(
             )
         }
 
-    fun songTrack(
+    fun createSongTrack(
         style: String,
         prompt: String? = null,
         songText: String? = null
-    ): StyledSongTrack = runCatching {
+    ): StyledSongTrackTask = runCatching {
         api.songTrackStyled(
             StyledSongTrackRequest(
                 style = style,
@@ -189,11 +189,28 @@ class KsolowToolsApiClient(
     }
         .onFailure { log.warn("Не удалось получить трек песни из сервиса {}", config.serviceUrl, it) }
         .getOrElse {
-            StyledSongTrack(
+            StyledSongTrackTask(
                 style = style,
                 success = false,
                 performer = "Suno $style",
                 errorMessage = "Не удалось сгенерировать трек."
+            )
+        }
+
+    fun songTrackStatus(taskId: String): StyledSongTrackStatus = runCatching {
+        api.songTrackStatus(taskId)
+            .execute()
+            .body()
+            .requireBody("songTrackStatus")
+            .toModel()
+    }
+        .onFailure { log.warn("Не удалось получить статус трека песни из сервиса {}", config.serviceUrl, it) }
+        .getOrElse {
+            StyledSongTrackStatus(
+                taskId = taskId,
+                complete = true,
+                success = false,
+                errorMessage = "Не удалось получить статус генерации трека."
             )
         }
 
@@ -216,14 +233,20 @@ class KsolowToolsApiClient(
         text = text
     )
 
-    private fun StyledSongTrackResponse.toModel(): StyledSongTrack = StyledSongTrack(
+    private fun StyledSongTrackTaskResponse.toModel(): StyledSongTrackTask = StyledSongTrackTask(
         style = style,
         success = success,
         performer = performer,
-        title = title,
-        audioUrl = audioUrl,
-        durationSeconds = durationSeconds,
+        taskId = taskId,
         lyrics = lyrics,
+        errorMessage = errorMessage
+    )
+
+    private fun StyledSongTrackStatusResponse.toModel(): StyledSongTrackStatus = StyledSongTrackStatus(
+        taskId = taskId,
+        complete = complete,
+        success = success,
+        tracks = tracks.map { it.toModel() },
         errorMessage = errorMessage
     )
 
@@ -254,18 +277,38 @@ data class StyledSongText(
     val text: String
 )
 
-data class StyledSongTrack(
+data class StyledSongTrackTask(
     val style: String,
     val success: Boolean,
     val performer: String,
-    val title: String? = null,
-    val audioUrl: String? = null,
-    val durationSeconds: Int? = null,
+    val taskId: String? = null,
     val lyrics: String? = null,
     val errorMessage: String? = null
+)
+
+data class StyledSongTrackStatus(
+    val taskId: String,
+    val complete: Boolean,
+    val success: Boolean,
+    val tracks: List<StyledSongTrack> = emptyList(),
+    val errorMessage: String? = null
+)
+
+data class StyledSongTrack(
+    val audioUrl: String,
+    val imageUrl: String? = null,
+    val title: String,
+    val durationSeconds: Int? = null
 )
 
 data class GeneratedImage(
     val imageUrl: String? = null,
     val imageBase64: String? = null
+)
+
+private fun StyledSongTrackItem.toModel(): StyledSongTrack = StyledSongTrack(
+    audioUrl = audioUrl,
+    imageUrl = imageUrl,
+    title = title,
+    durationSeconds = durationSeconds
 )

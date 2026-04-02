@@ -357,12 +357,14 @@ fun CommandHandlerEnvironment.handleSuno(
         it.logTelegramResult("$action (статус)", log)
     }
 
-    val track = songSupport.songTrack(
+    val trackTask = songSupport.createSongTrack(
         chatId = message.chat.id,
         prompt = replyText
     )
 
-    if (!track.success || track.audioUrl.isNullOrBlank()) {
+    val track = songSupport.awaitSongTracks(trackTask)
+
+    if (!track.success || track.tracks.isEmpty()) {
         bot.sendMessage(
             chatId = chatId,
             text = "Suno не вернул mp3: ${track.errorMessage ?: "Неизвестная ошибка"}"
@@ -372,17 +374,30 @@ fun CommandHandlerEnvironment.handleSuno(
         return
     }
 
-    bot.sendAudioFromUrl(
-        chatId = chatId,
-        audioUrl = track.audioUrl,
-        performer = track.performer,
-        title = track.title,
-        duration = track.durationSeconds,
-        replyToMessageId = message.replyToMessage?.messageId?.toLong(),
-        allowSendingWithoutReply = true,
-        action = action,
-        log = log
-    )
+    track.tracks.forEachIndexed { index, readyTrack ->
+        readyTrack.imageUrl?.takeIf { it.isNotBlank() }?.let { imageUrl ->
+            bot.sendPhoto(
+                chatId = chatId,
+                photo = ByUrl(imageUrl),
+                replyToMessageId = message.replyToMessage?.messageId?.toLong(),
+                allowSendingWithoutReply = true
+            ).also {
+                it.logTelegramCall("$action (обложка ${index + 1}/${track.tracks.size})", log)
+            }
+        }
+
+        bot.sendAudioFromUrl(
+            chatId = chatId,
+            audioUrl = readyTrack.audioUrl,
+            performer = track.performer,
+            title = readyTrack.title,
+            duration = readyTrack.durationSeconds,
+            replyToMessageId = message.replyToMessage?.messageId?.toLong(),
+            allowSendingWithoutReply = true,
+            action = "$action (трек ${index + 1}/${track.tracks.size})",
+            log = log
+        )
+    }
 }
 
 internal fun resolveWeatherLocationCode(

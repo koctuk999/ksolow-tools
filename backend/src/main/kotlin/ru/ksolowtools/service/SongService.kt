@@ -44,11 +44,11 @@ class SongService(
         )
     }
 
-    fun songTrackStyled(request: StyledSongTrackRequest): StyledSongTrackResponse {
+    fun songTrackStyled(request: StyledSongTrackRequest): StyledSongTrackTaskResponse {
         val songProfile = styleService.songProfile(request.style)
         val inputText = request.songText?.trim().takeUnless { it.isNullOrBlank() }
             ?: request.prompt?.trim().takeUnless { it.isNullOrBlank() }
-            ?: return StyledSongTrackResponse.failure(
+            ?: return StyledSongTrackTaskResponse.failure(
                 style = songProfile.styleName,
                 performer = performerName(songProfile),
                 lyrics = null,
@@ -66,70 +66,83 @@ class SongService(
             title = songDraft.title
         )
 
-        return when (val result = generateAndAwait(trackRequest)) {
-            is SongGenerationResult.Success -> StyledSongTrackResponse.success(
+        return when (val createResult = sunoClient.generate(trackRequest)) {
+            is SunoTaskCreateResult.Success -> StyledSongTrackTaskResponse.success(
                 style = songProfile.styleName,
                 performer = performerName(songProfile),
                 lyrics = songDraft.lyrics,
-                title = result.track.title,
-                audioUrl = result.track.audioUrl,
-                durationSeconds = result.track.durationSeconds
+                taskId = createResult.taskId
             )
 
-            is SongGenerationResult.Failure -> StyledSongTrackResponse.failure(
-                style = songProfile.styleName,
-                performer = performerName(songProfile),
-                lyrics = songDraft.lyrics,
-                reason = result.reason
-            )
+            is SunoTaskCreateResult.Failure -> {
+                log.warn("Не удалось поставить задачу в Suno: {}", createResult.reason)
+                StyledSongTrackTaskResponse.failure(
+                    style = songProfile.styleName,
+                    performer = performerName(songProfile),
+                    lyrics = songDraft.lyrics,
+                    reason = createResult.reason
+                )
+            }
         }
     }
 
-    private fun generateAndAwait(request: SunoGenerateRequest): SongGenerationResult {
-        val taskId = when (val createResult = sunoClient.generate(request)) {
-            is SunoTaskCreateResult.Success -> createResult.taskId
-            is SunoTaskCreateResult.Failure -> {
-                log.warn("Не удалось поставить задачу в Suno: {}", createResult.reason)
-                return SongGenerationResult.Failure(createResult.reason)
-            }
-        }
+    fun songTrackStatus(taskId: String): StyledSongTrackStatusResponse {
+        val details = sunoClient.generationDetails(taskId)
+            ?: return StyledSongTrackStatusResponse.failure(
+                taskId = taskId,
+                reason = "Не удалось получить статус задачи Suno"
+            )
+        val tracks = details.response
+            ?.tracks()
+            .orEmpty()
+            .filter { !it.audioUrl.isNullOrBlank() }
+            .map { it.toReadyTrack() }
 
-        repeat(MAX_ATTEMPTS) { attempt ->
-            val details = sunoClient.generationDetails(taskId)
-                ?: return SongGenerationResult.Failure("Не удалось получить статус задачи Suno")
-            val track = details.response?.tracks()?.firstOrNull { !it.audioUrl.isNullOrBlank() }
-            when (details.status?.uppercase()) {
-                "SUCCESS", "FIRST_SUCCESS" -> {
-                    if (track == null) {
-                        return SongGenerationResult.Failure("Suno не вернул ссылку на mp3")
-                    }
-                    return SongGenerationResult.Success(track.toReadyTrack())
-                }
-
-                "CREATE_TASK_FAILED",
-                "GENERATE_AUDIO_FAILED",
-                "SENSITIVE_WORD_ERROR",
-                "FAILED" ->
-                    return SongGenerationResult.Failure(
-                        details.errorMessage ?: "Suno не смог сгенерировать песню"
+        return when (details.status?.uppercase()) {
+            "SUCCESS" -> {
+                if (tracks.isEmpty()) {
+                    StyledSongTrackStatusResponse.failure(
+                        taskId = taskId,
+                        reason = "Suno не вернул ссылку на mp3"
                     )
-
-                "TEXT_SUCCESS", "PENDING", "GENERATING", null -> {
-                    if (attempt < MAX_ATTEMPTS - 1) {
-                        Thread.sleep(POLL_INTERVAL_MS)
-                    }
-                }
-
-                else -> {
-                    log.warn("Неожиданный статус Suno: {}", details.status)
-                    if (attempt < MAX_ATTEMPTS - 1) {
-                        Thread.sleep(POLL_INTERVAL_MS)
-                    }
+                } else {
+                    StyledSongTrackStatusResponse.success(
+                        taskId = taskId,
+                        complete = true,
+                        tracks = tracks
+                    )
                 }
             }
-        }
 
-        return SongGenerationResult.Failure("Suno не успел сгенерировать песню за отведенное время")
+            "FIRST_SUCCESS" -> StyledSongTrackStatusResponse.success(
+                taskId = taskId,
+                complete = false,
+                tracks = tracks
+            )
+
+            "CREATE_TASK_FAILED",
+            "GENERATE_AUDIO_FAILED",
+            "SENSITIVE_WORD_ERROR",
+            "FAILED" ->
+                StyledSongTrackStatusResponse.failure(
+                    taskId = taskId,
+                    reason = details.errorMessage ?: "Suno не смог сгенерировать песню"
+                )
+
+            "TEXT_SUCCESS", "PENDING", "GENERATING", null ->
+                StyledSongTrackStatusResponse.pending(
+                    taskId = taskId,
+                    tracks = tracks
+                )
+
+            else -> {
+                log.warn("Неожиданный статус Suno: {}", details.status)
+                StyledSongTrackStatusResponse.pending(
+                    taskId = taskId,
+                    tracks = tracks
+                )
+            }
+        }
     }
 
     private fun buildSongSystemPrompt(songProfile: SongStyleProfile): String = buildString {
@@ -141,8 +154,9 @@ class SongService(
 
     private fun performerName(songProfile: SongStyleProfile): String = "Suno ${songProfile.styleName}"
 
-    private fun SunoTrack.toReadyTrack() = SongReadyTrack(
+    private fun SunoTrack.toReadyTrack() = StyledSongReadyTrack(
         audioUrl = audioUrl.orEmpty(),
+        imageUrl = imageUrl,
         title = title?.trim().takeUnless { it.isNullOrBlank() } ?: "Suno track",
         durationSeconds = duration?.roundToInt()
     )
@@ -185,8 +199,6 @@ class SongService(
 
     companion object {
         private const val DEFAULT_MODEL = "V4_5ALL"
-        private const val MAX_ATTEMPTS = 40
-        private const val POLL_INTERVAL_MS = 15_000L
         private const val MAX_TITLE_LENGTH = 80
         private const val NO_MESSAGES_TEXT = "Сегодня нечего подводить в итогах."
         private const val AI_FALLBACK_TEXT = "Не удалось сгенерировать текст песни."
@@ -211,13 +223,11 @@ data class StyledSongTrackRequest(
     val songText: String? = null
 )
 
-data class StyledSongTrackResponse(
+data class StyledSongTrackTaskResponse(
     val style: String,
     val success: Boolean,
     val performer: String,
-    val title: String? = null,
-    val audioUrl: String? = null,
-    val durationSeconds: Int? = null,
+    val taskId: String? = null,
     val lyrics: String? = null,
     val errorMessage: String? = null
 ) {
@@ -226,16 +236,12 @@ data class StyledSongTrackResponse(
             style: String,
             performer: String,
             lyrics: String,
-            title: String,
-            audioUrl: String,
-            durationSeconds: Int?
-        ) = StyledSongTrackResponse(
+            taskId: String
+        ) = StyledSongTrackTaskResponse(
             style = style,
             success = true,
             performer = performer,
-            title = title,
-            audioUrl = audioUrl,
-            durationSeconds = durationSeconds,
+            taskId = taskId,
             lyrics = lyrics
         )
 
@@ -244,7 +250,7 @@ data class StyledSongTrackResponse(
             performer: String,
             lyrics: String?,
             reason: String
-        ) = StyledSongTrackResponse(
+        ) = StyledSongTrackTaskResponse(
             style = style,
             success = false,
             performer = performer,
@@ -253,6 +259,54 @@ data class StyledSongTrackResponse(
         )
     }
 }
+
+data class StyledSongTrackStatusResponse(
+    val taskId: String,
+    val complete: Boolean,
+    val success: Boolean,
+    val tracks: List<StyledSongReadyTrack> = emptyList(),
+    val errorMessage: String? = null
+) {
+    companion object {
+        fun pending(
+            taskId: String,
+            tracks: List<StyledSongReadyTrack> = emptyList()
+        ) = StyledSongTrackStatusResponse(
+            taskId = taskId,
+            complete = false,
+            success = false,
+            tracks = tracks
+        )
+
+        fun success(
+            taskId: String,
+            complete: Boolean,
+            tracks: List<StyledSongReadyTrack>
+        ) = StyledSongTrackStatusResponse(
+            taskId = taskId,
+            complete = complete,
+            success = true,
+            tracks = tracks
+        )
+
+        fun failure(
+            taskId: String,
+            reason: String
+        ) = StyledSongTrackStatusResponse(
+            taskId = taskId,
+            complete = true,
+            success = false,
+            errorMessage = reason
+        )
+    }
+}
+
+data class StyledSongReadyTrack(
+    val audioUrl: String,
+    val imageUrl: String? = null,
+    val title: String,
+    val durationSeconds: Int? = null
+)
 
 data class SongStyleProfile(
     val styleName: String,
@@ -264,14 +318,3 @@ private data class SongDraft(
     val title: String,
     val lyrics: String
 )
-
-private data class SongReadyTrack(
-    val audioUrl: String,
-    val title: String,
-    val durationSeconds: Int?
-)
-
-private sealed interface SongGenerationResult {
-    data class Success(val track: SongReadyTrack) : SongGenerationResult
-    data class Failure(val reason: String) : SongGenerationResult
-}

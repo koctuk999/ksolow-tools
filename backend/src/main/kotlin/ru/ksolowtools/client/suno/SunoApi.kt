@@ -56,6 +56,8 @@ data class SunoTrack(
     val id: String? = null,
     @JsonAlias("audioUrl", "audio_url")
     val audioUrl: String? = null,
+    @JsonAlias("imageUrl", "image_url")
+    val imageUrl: String? = null,
     val title: String? = null,
     val duration: Double? = null
 )
