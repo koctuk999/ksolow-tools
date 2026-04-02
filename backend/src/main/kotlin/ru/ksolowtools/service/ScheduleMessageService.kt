@@ -61,7 +61,6 @@ class ScheduleMessageService(
         appendLine("Дата/время (${zoneId.id}): ${now.format(MORNING_FORMATTER)}")
         appendLine("Приветствие: ${morningGreeting(now.hour)}")
         appendLine("Статус дня: ${workDayStatus?.status ?: "Не удалось определить"}")
-        appendLine("Пожелание: Хорошего дня!")
         appendLine("Список праздников:")
         if (holidays.isEmpty()) {
             appendLine("— Сегодня праздников не найдено")
@@ -81,7 +80,6 @@ class ScheduleMessageService(
             }
         }
         appendLine()
-        appendLine("Нужен готовый текст вечернего сообщения по этим данным.")
     }.trim()
 
     private fun fallbackMorningMessage(
